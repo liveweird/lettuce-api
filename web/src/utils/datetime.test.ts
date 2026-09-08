@@ -3,6 +3,8 @@ import {
   addIsoDays,
   currentIsoMonth,
   formatIsoMonth,
+  formatIsoMonthShort,
+  formatMonthRangeShort,
   formatIsoWeekday,
   formatMonthRange,
   formatRelativeTime,
@@ -124,6 +126,12 @@ describe("month formatting (review periods)", () => {
   test("formatMonthRange renders the inclusive range and collapses a single-month period", () => {
     expect(formatMonthRange("2026-01", "2026-06", "en")).toBe("January 2026 – June 2026");
     expect(formatMonthRange("2026-03", "2026-03", "en")).toBe("March 2026");
+  });
+
+  test("formatMonthRangeShort abbreviates the months (the compact person-card form)", () => {
+    expect(formatMonthRangeShort("2026-08", "2027-01", "en")).toBe("Aug 2026 – Jan 2027");
+    expect(formatMonthRangeShort("2026-03", "2026-03", "en")).toBe("Mar 2026");
+    expect(formatIsoMonthShort("garbage", "en")).toBe("garbage");
   });
 
   test("nextIsoMonth steps one month and rolls over a year boundary", () => {

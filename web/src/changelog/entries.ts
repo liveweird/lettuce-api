@@ -17,6 +17,12 @@ interface ChangelogEntry {
 
 export const CHANGELOG: readonly ChangelogEntry[] = [
   {
+    version: "3.8.2",
+    date: "2026-09-08",
+    en: `On a person's card, the last review's period now uses short month names ("Aug 2026 – Jan 2027") so it fits on one line next to its status instead of wrapping.`,
+    pl: `Na karcie osoby okres ostatniej oceny używa teraz skróconych nazw miesięcy ("sie 2026 – sty 2027"), dzięki czemu mieści się w jednej linii obok statusu, zamiast zawijać się do kolejnej.`,
+  },
+  {
     version: "3.8.1",
     date: "2026-09-08",
     en: `Fixed the layout of a person's card on the Dashboard's subordinate/peer/manager tabs: when a row's value ran onto a second line (for example the last review's period next to its status), the label no longer sits misaligned against it — it now lines up with the first line.`,

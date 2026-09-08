@@ -707,9 +707,10 @@ describe("TeamMembersTable", () => {
       expect(screen.getByText("2 days ago")).toHaveAttribute("title", stamp(new Date(2026, 6, 10, 12, 0).getTime()));
       expect(screen.getByText("Active goals")).toBeInTheDocument();
       expect(screen.getByText("3")).toBeInTheDocument();
-      // The last authored review (v1.34.0): period range + status badge.
+      // The last authored review (v1.34.0): period range + status badge. The card uses the
+      // short-month form (v3.8.2) so the range fits on one line beside the status badge.
       expect(screen.getByText("Last review")).toBeInTheDocument();
-      expect(screen.getByText("January 2026 – June 2026")).toBeInTheDocument();
+      expect(screen.getByText("Jan 2026 – Jun 2026")).toBeInTheDocument();
       expect(screen.getByText("Calibration")).toBeInTheDocument();
       // The days-off pair (v1.44.0).
       expect(screen.getByText("Next vacation")).toBeInTheDocument();
