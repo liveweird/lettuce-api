@@ -83,3 +83,51 @@ test("manager requests feedback about a subordinate; provider sees the message, 
   await expect(page.getByText(body)).toBeVisible();
   await expect(page.getByLabel("Status")).toHaveText("Sent");
 });
+
+// The request-feedback expiration presets (v3.8.0, UI only — the time-based auto-reject sweep
+// is covered server-side in FeedbackExpiryTest, not here). Reuses this file's triple (subject
+// AAA One ← provider AAA Three, requester Manager AAA): the test above already closes its row to
+// SENT, freeing the triple for a second REQUESTED row here — closed out via Reject at the end so
+// no open row is left behind for a rerun.
+test("a fixed-duration expiration preset is set on the request and shown to the provider before they decide", async ({
+  page,
+}) => {
+  await login(page, MANAGER_AAA);
+  await page.goto("/?tab=subordinates");
+  await page.getByRole("button", { name: "Feedback actions for AAA One" }).click();
+  await page.getByRole("menuitem", { name: "Request feedback about AAA One" }).click();
+  await expect(page).toHaveURL(/\/feedback\/request/);
+  await pickSelectOption(page, "Add a provider", "AAA Three");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByRole("combobox", { name: "Expiration" }).click();
+  await page.getByRole("option", { name: "In 1 week" }).click();
+  const [created] = await Promise.all([
+    page.waitForResponse(
+      (r) => r.url().endsWith("/api/v1/feedbacks") && r.request().method() === "POST" && r.ok(),
+    ),
+    page.getByRole("button", { name: "Request", exact: true }).click(),
+  ]);
+  const body: { id: number; expiresOn: string } = await created.json();
+  const expectedLabel = new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(
+    new Date(`${body.expiresOn}T00:00:00`),
+  );
+  await logout(page);
+
+  // Provider: the triage screen shows the deadline before they decide (the same field the
+  // sweep later acts on server-side).
+  await login(page, AAA_THREE);
+  await page.goto(`/feedback/${body.id}/edit`);
+  await expect(page.getByRole("heading", { name: "Feedback request" })).toBeVisible();
+  await expect(page.getByText("Expires on")).toBeVisible();
+  await expect(page.getByText(expectedLabel)).toBeVisible();
+
+  // Close the row out so the triple stays free for a rerun of this file.
+  await page.getByRole("button", { name: "Reject" }).click();
+  await Promise.all([
+    page.waitForResponse(
+      (r) => r.url().endsWith(`/feedbacks/${body.id}/reject`) && r.request().method() === "POST" && r.ok(),
+    ),
+    page.getByRole("dialog").getByRole("button", { name: "Reject" }).click(),
+  ]);
+  await logout(page);
+});
