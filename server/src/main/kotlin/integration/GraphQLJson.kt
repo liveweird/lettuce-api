@@ -26,6 +26,8 @@ data class GraphQLHttpRequest(
  */
 inline fun <reified T> T.toGraphQL(): Map<String, Any?> {
     val element = graphQlJson.encodeToJsonElement(this)
+    // Safe: every DTO this is called on encodes to a JsonObject, so toAnyValue() always
+    // returns a Map here — the cast just recovers the static type erased by the JsonElement dispatch.
     @Suppress("UNCHECKED_CAST")
     return element.toAnyValue() as Map<String, Any?>
 }

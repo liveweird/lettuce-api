@@ -30,6 +30,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
+import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -425,6 +426,36 @@ class PayloadValidationTest {
             )
         }
         assertEquals(HttpStatusCode.BadRequest, draftWithExpiry.status)
+
+        // One day of UTC timezone slack (the goals/KPI/career precedent): today and
+        // today-minus-1 are both accepted, today-minus-2 is rejected. Each accepted create
+        // uses its own fresh (subject, provider, requester) triple, so it can't collide with
+        // the still-open REQUESTED row the "2099-12-31" case above created (the no-duplicate 409).
+        val today = LocalDate.now()
+        assertEquals(HttpStatusCode.BadRequest, createRequested(today.minusDays(2).toString()).status)
+
+        suspend fun createRequestedWithFreshParties(label: String, expiresOn: String): HttpStatusCode {
+            val reqEmail = uniqueEmail("$label-r")
+            val reqId = TestUsers.seed(email = reqEmail, password = "pw-123456789", roles = emptySet())
+            val provId = TestUsers.seed(email = uniqueEmail("$label-p"), password = "pw-123456789", roles = emptySet())
+            val freshClient = authedClient(reqEmail, "pw-123456789")
+            return freshClient.post("/api/v1/feedbacks") {
+                contentType(ContentType.Application.Json)
+                setBody(
+                    FeedbackCreateRequest(
+                        requesterId = reqId,
+                        subjectId = reqId,
+                        providerId = provId,
+                        visibility = FeedbackVisibility.PROVIDER_REQUESTER_SUBJECT,
+                        status = FeedbackStatus.REQUESTED,
+                        expiresOn = expiresOn,
+                    ),
+                )
+            }.status
+        }
+
+        assertEquals(HttpStatusCode.Created, createRequestedWithFreshParties("fb-exp-y", today.minusDays(1).toString()))
+        assertEquals(HttpStatusCode.Created, createRequestedWithFreshParties("fb-exp-t", today.toString()))
     }
 
     @Test

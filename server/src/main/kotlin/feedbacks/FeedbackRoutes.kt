@@ -17,6 +17,7 @@ import ch.nokillswit.infra.paging.optionalString
 import ch.nokillswit.infra.paging.optionalLong
 import ch.nokillswit.infra.paging.optionalUInt
 import ch.nokillswit.infra.paging.toPage
+import ch.nokillswit.notifications.Notification
 import ch.nokillswit.notifications.NotificationServiceKey
 import ch.nokillswit.users.Feature
 import ch.nokillswit.users.UserServiceKey
@@ -111,6 +112,21 @@ fun Application.configureFeedbackRoutes() {
         return feedback
     }
 
+    // The shared tail of every mutation: persist each notification (best-effort, one create
+    // per recipient), then the audit event — both AFTER the mutation itself has already
+    // committed in its own transaction (the documented consistency model, see "Consistency
+    // model" in persistence.md). A null eventDescriptor (feedbackUpdateEvent may report
+    // "nothing actually changed") skips the event entirely.
+    suspend fun persistOutcome(
+        notifications: List<Notification>,
+        eventDescriptor: FeedbackEventDescriptor?,
+        feedbackId: UInt,
+        userId: UInt,
+    ) {
+        notifications.forEach { notificationService.create(it) }
+        eventDescriptor?.let { feedbackEventService.create(it.toEvent(feedbackId, userId)) }
+    }
+
     // Shared handler for the lifecycle-transition action endpoints: provider-only, 404 when
     // missing, 409 (via ConflictException in the service) when the transition isn't allowed,
     // otherwise it applies the change, delivers notifications, and records the audit event.
@@ -118,10 +134,12 @@ fun Application.configureFeedbackRoutes() {
         val existing = writeGuardedFeedback(call, feedbackId)
         val toNotify = feedbackService.transition(feedbackId, target)
             ?: throw NotFoundException("Feedback not found")
-        toNotify.forEach { notificationService.create(it) }
-        feedbackUpdateEvent(existing, existing.copy(status = target))?.let { descriptor ->
-            feedbackEventService.create(descriptor.toEvent(feedbackId, call.caller().userId))
-        }
+        persistOutcome(
+            toNotify,
+            feedbackUpdateEvent(existing, existing.copy(status = target)),
+            feedbackId,
+            call.caller().userId,
+        )
         call.respond(HttpStatusCode.NoContent)
     }
 
@@ -139,10 +157,7 @@ fun Application.configureFeedbackRoutes() {
                 // a background job was out of scope and the list route is hit constantly, keeping
                 // expiry prompt in practice.
                 feedbackService.expireOverdueRequests(LocalDate.now()).forEach { outcome ->
-                    outcome.notifications.forEach { notificationService.create(it) }
-                    feedbackEventService.create(
-                        feedbackExpiryEvent().toEvent(outcome.feedbackId, outcome.providerId),
-                    )
+                    persistOutcome(outcome.notifications, feedbackExpiryEvent(), outcome.feedbackId, outcome.providerId)
                 }
                 val params = call.request.queryParameters
                 val view = when (val raw = params.optionalString("view") ?: "received") {
@@ -244,12 +259,12 @@ fun Application.configureFeedbackRoutes() {
                 }
                 val id = result.id
                 call.response.header(HttpHeaders.Location, call.application.href(Feedbacks.Id(id = id)))
-                // Best-effort side effect: deliver creation notifications after the commit.
-                result.notifications.forEach { notificationService.create(it) }
-                // Re-read so the response carries the server-assigned lastModified.
+                // Re-read so the response (and the audit event below) carries the
+                // server-assigned lastModified — a pure read, no side effects of its own.
                 val created = feedbackService.read(id) ?: feedback
-                // Audit: record the creation against the acting caller.
-                feedbackEventService.create(feedbackCreationEvent(created).toEvent(id, caller.userId))
+                // Best-effort side effect: deliver creation notifications after the commit,
+                // then record the creation audit event against the acting caller.
+                persistOutcome(result.notifications, feedbackCreationEvent(created), id, caller.userId)
                 val names = feedbackService.partyNames(created)
                 call.respond(
                     HttpStatusCode.Created,
@@ -309,11 +324,16 @@ fun Application.configureFeedbackRoutes() {
                 if (feedbackService.delete(route.id) == 0) {
                     throw NotFoundException("Feedback not found")
                 }
-                // Best-effort side effect: tell the requester (if any) the provider deleted it (no link).
+                // Best-effort side effect: tell the requester (if any) the provider deleted it
+                // (no link), then audit the deletion against the acting provider (events
+                // outlive the soft-deleted row).
                 val names = feedbackService.partyNames(existing)
-                feedbackDeletionNotifications(existing, names).forEach { notificationService.create(it) }
-                // Audit the deletion against the acting provider (events outlive the soft-deleted row).
-                feedbackEventService.create(feedbackDeletionEvent().toEvent(route.id, call.caller().userId))
+                persistOutcome(
+                    feedbackDeletionNotifications(existing, names),
+                    feedbackDeletionEvent(),
+                    route.id,
+                    call.caller().userId,
+                )
                 call.respond(HttpStatusCode.NoContent)
             }
         }

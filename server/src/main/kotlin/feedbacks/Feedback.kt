@@ -50,9 +50,12 @@ internal fun validateSubjects(feedback: Feedback) {
 /**
  * The `expiresOn` rule (v3.8.0), checked at CREATE only from the route (`FeedbackRoutes.kt`,
  * after the authz guard — 403 wins over 400): meaningful only while `status == REQUESTED`, a
- * strict ISO date (`parseIsoDateStrict`), and not in the past. Injectable [today] mirrors
- * `validateGoalDueDate`'s testability pattern (`goals/Goal.kt`). `expiresOn == null` is always
- * fine (indefinite, today's behaviour) — the field is otherwise set once and never updated
+ * strict ISO date (`parseIsoDateStrict`), and not in the past — **minus one day of timezone
+ * tolerance** (the goals/KPI/career precedent, `validateGoalDueDate` in `goals/Goal.kt`: the
+ * SPA submits the BROWSER-local date while the server runs UTC, so a user behind UTC in their
+ * evening legitimately sends the server's "yesterday"). Injectable [today] mirrors
+ * `validateGoalDueDate`'s testability pattern. `expiresOn == null` is always fine (indefinite,
+ * today's behaviour) — the field is otherwise set once and never updated
  * (`FeedbackService.update`/`editContent` omit the column, the `requesterMessage` precedent).
  */
 internal fun validateFeedbackExpiry(status: FeedbackStatus, expiresOn: String?, today: LocalDate = LocalDate.now()) {
@@ -61,7 +64,7 @@ internal fun validateFeedbackExpiry(status: FeedbackStatus, expiresOn: String?, 
         throw BadRequestException("Expiration applies only to requested feedback")
     }
     val parsed = parseIsoDateStrict(expiresOn, "expiresOn")
-    if (parsed < today) throw BadRequestException("expiresOn must not be in the past")
+    if (parsed < today.minusDays(1)) throw BadRequestException("expiresOn must not be in the past")
 }
 
 @Serializable
