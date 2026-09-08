@@ -13,6 +13,7 @@ import FormFooter from "../components/FormFooter";
 import MetaStrip from "../components/MetaStrip";
 import PageHeader from "../components/PageHeader";
 import PersonaChip from "../components/PersonaChip";
+import { renderUserOption } from "../components/userOptions";
 import { todayIsoDate } from "../utils/datetime";
 import { oneOnOneEditLink } from "../utils/oneOnOneLinks";
 import { oneOnOneSaveErrorMessage } from "../utils/oneOnOneForm";
@@ -123,6 +124,7 @@ export default function CreateOneOnOne() {
                       aria-label={t("oneOnOne.subordinate")}
                       placeholder={t("oneOnOne.pickSubordinate")}
                       data={options}
+                      renderOption={renderUserOption}
                       value={picked}
                       onChange={setPicked}
                       searchable

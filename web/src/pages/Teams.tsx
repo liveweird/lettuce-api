@@ -36,6 +36,7 @@ import { userDetailsLink } from "../utils/userLinks";
 import { teamDetailsLink } from "../utils/teamLinks";
 import { loadErrorMessage } from "../utils/saveError";
 import PageHeader from "../components/PageHeader";
+import { renderUserOption } from "../components/userOptions";
 
 const SORT_FIELDS = ["name"] as const;
 type SortField = (typeof SORT_FIELDS)[number];
@@ -117,6 +118,7 @@ export default function Teams() {
           label={t("common.field.manager")}
           placeholder={managersLoading ? t("common.state.loading") : t("common.state.any")}
           data={managerOptions}
+          renderOption={renderUserOption}
           value={managerIdFilter == null ? null : String(managerIdFilter)}
           onChange={(v) => setManagerIdFilter(v == null ? null : Number(v))}
           searchable

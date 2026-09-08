@@ -32,6 +32,7 @@ import { feedbackRowMenu } from "../components/feedbackActionsMenu";
 import PersonaChip from "../components/PersonaChip";
 import MetaStrip from "../components/MetaStrip";
 import PageHeader from "../components/PageHeader";
+import { renderUserOption, userOption } from "../components/userOptions";
 import TeamMembersTable from "./TeamMembersTable";
 import { useDeleteConfirm } from "../hooks/useDeleteConfirm";
 import { feedbackAskLink, feedbackProvideLink, userFeedbacksLink } from "../utils/feedbackLinks";
@@ -135,7 +136,7 @@ export default function TeamDetails() {
   const addOptions = (userPool ?? [])
     .filter((u) => !memberIds.has(u.id) && u.id !== team?.managerId)
     .sort((a, b) => a.name.localeCompare(b.name))
-    .map((u) => ({ value: String(u.id), label: u.name }));
+    .map((u) => userOption(u.id, u.name, (u.teams ?? []).map((teamRef) => teamRef.name)));
 
   function add() {
     if (selectedUser) addMutation.mutate(Number(selectedUser));
@@ -250,6 +251,7 @@ export default function TeamDetails() {
             label={t("teams.addUser")}
             placeholder={t("teams.pickUser")}
             data={addOptions}
+            renderOption={renderUserOption}
             value={selectedUser}
             onChange={setSelectedUser}
             searchable

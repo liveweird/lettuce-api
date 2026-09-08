@@ -9,6 +9,7 @@ import { invalidateFeedback } from "../utils/feedbackQueries";
 import DuplicateFeedbackAlert from "../components/DuplicateFeedbackAlert";
 import FeedbackForm from "../components/FeedbackForm";
 import RecipientsMultiSelect from "../components/RecipientsMultiSelect";
+import { userOption } from "../components/userOptions";
 import { useAllUsers } from "../hooks/useAllUsers";
 import { useFeedbackDuplicates } from "../hooks/useFeedbackDuplicate";
 import { feedbackEditLink } from "../utils/feedbackLinks";
@@ -66,7 +67,7 @@ export default function CreateFeedback({ kudo = false }: { kudo?: boolean }) {
     () =>
       (userPool ?? [])
         .filter((u) => u.id !== providerId)
-        .map((u) => ({ value: String(u.id), label: u.name }))
+        .map((u) => userOption(u.id, u.name, (u.teams ?? []).map((team) => team.name)))
         .sort((a, b) => a.label.localeCompare(b.label)),
     [userPool, providerId],
   );

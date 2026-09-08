@@ -18,6 +18,7 @@ import DateField from "../components/DateField";
 import FormFooter from "../components/FormFooter";
 import MetaStrip from "../components/MetaStrip";
 import PageHeader from "../components/PageHeader";
+import { renderUserOption } from "../components/userOptions";
 import { useDiscardGuard } from "../hooks/useDiscardGuard";
 import { ApiError } from "../api/http";
 import { getUserId, hasFeature } from "../api/session";
@@ -240,6 +241,7 @@ export default function CreateDaysOff() {
                         aria-label={t("daysOff.onBehalfLabel")}
                         placeholder={t("daysOff.pickReport")}
                         data={reportOptions}
+                        renderOption={renderUserOption}
                         value={subjectPick}
                         onChange={(v) => {
                           setSubjectPick(v);

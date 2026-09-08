@@ -22,8 +22,14 @@ export function foldDiacritics(s: string): string {
     .replace(/[łđøæœß]/g, (c) => NON_DECOMPOSING[c]);
 }
 
-const matches = (item: ComboboxItem, query: string) =>
-  foldDiacritics(item.label).includes(query);
+// An option widened with searchable text kept OUT of the label (e.g. a person's team names) —
+// domain-neutral, so any picker can make hidden text searchable without a per-site `filter`
+// prop. Optional, so every existing plain-label option keeps matching exactly as before.
+type FilterableOption = ComboboxItem & { keywords?: string };
+
+const matches = (item: FilterableOption, query: string) =>
+  foldDiacritics(item.label).includes(query) ||
+  (item.keywords != null && foldDiacritics(item.keywords).includes(query));
 
 // Drop-in replacement for Mantine's defaultOptionsFilter — the same label-contains-search
 // contract (grouped options included), but diacritics-insensitive on both sides so typing
@@ -37,6 +43,6 @@ export const foldedOptionsFilter: OptionsFilter = ({ options, search }) => {
         : option,
     )
     .filter((option) =>
-      "group" in option ? option.items.length > 0 : matches(option as ComboboxItem, query),
+      "group" in option ? option.items.length > 0 : matches(option as FilterableOption, query),
     );
 };

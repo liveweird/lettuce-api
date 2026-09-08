@@ -13,6 +13,7 @@ import FormFooter from "../components/FormFooter";
 import MetaStrip from "../components/MetaStrip";
 import PageHeader from "../components/PageHeader";
 import PersonaChip from "../components/PersonaChip";
+import { renderUserOption } from "../components/userOptions";
 import { renderPeriodOption, useReviewPeriodOptions } from "../hooks/useReviewPeriodOptions";
 import { reviewEditLink, reviewViewLink } from "../utils/performanceReviewLinks";
 import { showSuccessToast } from "../utils/toast";
@@ -137,6 +138,7 @@ export default function CreatePerformanceReview() {
                       aria-label={t("performanceReview.subordinate")}
                       placeholder={t("performanceReview.pickSubordinate")}
                       data={options}
+                      renderOption={renderUserOption}
                       value={picked}
                       onChange={setPicked}
                       searchable

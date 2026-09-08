@@ -12,6 +12,7 @@ import GoalDefinitionFields from "../components/GoalDefinitionFields";
 import MetaStrip from "../components/MetaStrip";
 import PageHeader from "../components/PageHeader";
 import PersonaChip from "../components/PersonaChip";
+import { renderUserOption } from "../components/userOptions";
 import { toReportOptions, useManagedReports } from "../hooks/useManagedReports";
 import { useCreateThenActivate } from "../hooks/useCreateThenActivate";
 import { useDiscardGuard } from "../hooks/useDiscardGuard";
@@ -119,6 +120,7 @@ export default function CreateGoal() {
                         aria-label={t("goal.subordinate")}
                         placeholder={t("goal.pickSubordinate")}
                         data={options}
+                        renderOption={renderUserOption}
                         value={picked}
                         onChange={setPicked}
                         searchable

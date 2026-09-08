@@ -273,7 +273,7 @@ describe("CreateDaysOff", () => {
 
     await screen.findByText("New days off");
     await userEvent.click(screen.getByRole("combobox", { name: "On behalf of" }));
-    await userEvent.click(await screen.findByRole("option", { name: "Rita Report" }));
+    await userEvent.click(await screen.findByRole("option", { name: /Rita Report/ }));
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveTextContent("Discard changes?");
@@ -293,11 +293,12 @@ describe("CreateDaysOff", () => {
     expect(submit).toBeDisabled();
 
     await userEvent.click(screen.getByRole("combobox", { name: "On behalf of" }));
-    const options = (await screen.findAllByRole("option")).map((o) => o.textContent);
-    expect(options).toContain("Rita Report");
-    expect(options).toContain("Zed Report");
-    expect(options).not.toContain("Me");
-    await userEvent.click(screen.getByRole("option", { name: "Rita Report" }));
+    // Each option's team subtitle rides its accessible name too — matched via a pattern.
+    const options = (await screen.findAllByRole("option")).map((o) => o.textContent ?? "");
+    expect(options.some((o) => o.includes("Rita Report"))).toBe(true);
+    expect(options.some((o) => o.includes("Zed Report"))).toBe(true);
+    expect(options.some((o) => o.includes("Me"))).toBe(false);
+    await userEvent.click(screen.getByRole("option", { name: /Rita Report/ }));
 
     expect(submit).toBeEnabled();
     // The budget preview reads the PICKED report's managed-budget row.
@@ -321,7 +322,7 @@ describe("CreateDaysOff", () => {
 
     await pickRange(MONDAY, TUESDAY);
     await userEvent.click(screen.getByRole("combobox", { name: "On behalf of" }));
-    await userEvent.click(await screen.findByRole("option", { name: "Zed Report" }));
+    await userEvent.click(await screen.findByRole("option", { name: /Zed Report/ }));
     await userEvent.click(screen.getByRole("button", { name: "Submit auto-accepted" }));
 
     await waitFor(() => expect(screen.getByText("LIST")).toBeInTheDocument());

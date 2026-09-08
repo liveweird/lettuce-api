@@ -2,6 +2,7 @@ import { useState } from "react";
 import { MultiSelect } from "@mantine/core";
 import { useTranslation } from "react-i18next";
 import { accessibleRenderPill } from "./accessiblePill";
+import { renderUserOption, type UserOption } from "./userOptions";
 
 // A feedback may address up to four people (v3.1.0) — mirrors the server's MAX_FEEDBACK_SUBJECTS.
 const MAX_FEEDBACK_RECIPIENTS = 4;
@@ -26,7 +27,7 @@ export default function RecipientsMultiSelect({
   error,
 }: {
   label: string;
-  options: { value: string; label: string }[];
+  options: UserOption[];
   value: string[];
   onChange: (value: string[]) => void;
   error?: string;
@@ -45,6 +46,7 @@ export default function RecipientsMultiSelect({
       description={description}
       placeholder={value.length === 0 ? t("feedback.pickUser") : undefined}
       data={options}
+      renderOption={renderUserOption}
       value={value}
       onChange={(next) => {
         if (next.length < MAX_FEEDBACK_RECIPIENTS) setCapHit(false);

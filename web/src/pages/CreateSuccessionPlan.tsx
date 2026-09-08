@@ -11,6 +11,7 @@ import FormFooter from "../components/FormFooter";
 import MetaStrip from "../components/MetaStrip";
 import PageHeader from "../components/PageHeader";
 import SuccessionPlanFields from "../components/SuccessionPlanFields";
+import { renderUserOption } from "../components/userOptions";
 import { useDiscardGuard } from "../hooks/useDiscardGuard";
 import { toReportOptions, useManagedReports } from "../hooks/useManagedReports";
 import {
@@ -102,6 +103,7 @@ export default function CreateSuccessionPlan() {
                         aria-label={t("succession.person")}
                         placeholder={t("succession.pickPerson")}
                         data={options}
+                        renderOption={renderUserOption}
                         value={picked}
                         onChange={setPicked}
                         searchable

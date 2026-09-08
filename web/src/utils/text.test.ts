@@ -50,6 +50,29 @@ describe("foldedOptionsFilter", () => {
     expect(foldedOptionsFilter({ options: flat, search: "", limit: Infinity })).toEqual(flat);
   });
 
+  test("also matches an option's keywords, not just its label", () => {
+    const withKeywords = [
+      { value: "1", label: "Ann", keywords: "Team AAA" },
+      { value: "2", label: "Ben", keywords: "Team BBB" },
+      { value: "3", label: "Cy" }, // no keywords — behaves exactly as before
+    ];
+    expect(
+      foldedOptionsFilter({ options: withKeywords, search: "aaa", limit: Infinity }),
+    ).toEqual([withKeywords[0]]);
+    // Diacritic-folding applies to keywords too.
+    const accentedKeyword = [{ value: "1", label: "Ann", keywords: "Żółw" }];
+    expect(
+      foldedOptionsFilter({ options: accentedKeyword, search: "zolw", limit: Infinity }),
+    ).toEqual(accentedKeyword);
+    // A keyword-less option keeps matching only on its label, unaffected.
+    expect(
+      foldedOptionsFilter({ options: withKeywords, search: "cy", limit: Infinity }),
+    ).toEqual([withKeywords[2]]);
+    expect(
+      foldedOptionsFilter({ options: withKeywords, search: "nope", limit: Infinity }),
+    ).toEqual([]);
+  });
+
   test("filters inside groups and drops emptied groups", () => {
     const grouped = [
       { group: "Team A", items: [{ value: "1", label: "Żółw" }] },

@@ -97,7 +97,7 @@ describe("CreateSuccessionPlan page", () => {
     expect(screen.getByRole("button", { name: "Create" })).toBeDisabled();
 
     await user.click(screen.getByLabelText("Person", { selector: "input" }));
-    await user.click(await screen.findByRole("option", { name: "Sam Seat" }));
+    await user.click(await screen.findByRole("option", { name: /Sam Seat/ }));
 
     // The sliders (v2.44.0): defaults CORE/MEDIUM sit mid-scale; one ArrowRight promotes
     // each to the severe end (the CareerPyramid keyboard-driving idiom).
@@ -137,7 +137,7 @@ describe("CreateSuccessionPlan page", () => {
     renderScreen({ createStatus: 409 });
 
     await user.click(await screen.findByLabelText("Person", { selector: "input" }));
-    await user.click(await screen.findByRole("option", { name: "Sam Seat" }));
+    await user.click(await screen.findByRole("option", { name: /Sam Seat/ }));
     await user.click(screen.getByRole("button", { name: "Create" }));
 
     expect(
