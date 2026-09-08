@@ -10,7 +10,7 @@ import { jsonResponse } from "../test/http";
 // stub additionally renders the custom tooltip content once, so the ghost-row filter and the
 // date-formatted label are assertable.
 vi.mock("@mantine/charts", () => ({
-  /* eslint-disable @typescript-eslint/no-explicit-any */
+  /* eslint-disable @typescript-eslint/no-explicit-any -- typing the mocked LineChart/ChartTooltip props against @mantine/charts' real generics isn't worth it in a test-only stub */
   LineChart: ({ data, referenceLines, tooltipProps, children }: any) => (
     <div
       data-testid="line-chart"
@@ -41,7 +41,7 @@ vi.mock("@mantine/charts", () => ({
 // The good-zone ReferenceArea is a raw recharts child (v2.41.0) — stub it so the mocked
 // LineChart can render it without a real chart context.
 vi.mock("recharts", () => ({
-  /* eslint-disable @typescript-eslint/no-explicit-any */
+  /* eslint-disable @typescript-eslint/no-explicit-any -- typing the mocked ReferenceArea props against recharts' real generics isn't worth it in a test-only stub */
   ReferenceArea: (props: any) => (
     <div
       data-testid="good-zone"

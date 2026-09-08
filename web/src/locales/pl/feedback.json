@@ -160,7 +160,8 @@
     "contentUpdated": "Zaktualizowano treść.",
     "contentAndVisibilityUpdated": "Zaktualizowano treść i widoczność.",
     "visibilityChanged": "Zmieniono widoczność na {{to}}.",
-    "requestExpired": "Prośba o feedback wygasła."
+    "requestExpired": "Prośba o feedback wygasła.",
+    "systemActor": "Automatycznie"
   },
   "feedbacksAudit": "Wszystkie feedbacki: {{who}}",
   "feedbacksAuditHint": "Każdy feedback, którego stroną jest {{who}} — jako podmiot, wystawiający/a lub proszący/a — w każdym statusie. Tylko do odczytu.",

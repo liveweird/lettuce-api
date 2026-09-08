@@ -3,7 +3,9 @@
 - **Spec**: [tests/feedback-request-third-party.spec.ts](../tests/feedback-request-third-party.spec.ts)
 - **Actors**: Manager AAA (requester), AAA One (subject), AAA Three (provider) — seed accounts
 - **Owns** (exclusive server-side state): the (subject AAA One ← provider AAA Three,
-  requester Manager AAA) feedback triple
+  requester Manager AAA) feedback triple — one row per test, sequential within the file, so the
+  second test's REQUESTED row is created only once the first has closed its own row to SENT
+- **Since**: v3.8.0 adds the expiration-preset scenario below
 
 The manager-driven request flow (distinct from the self "Ask for feedback"): a manager
 requests feedback ABOUT a subordinate FROM a third party, with a requester message. The
@@ -33,3 +35,25 @@ notified on pick-up and on send.
 7. Manager AAA opens the feedback's view page.
    - *Expected*: the content is visible and the status reads "Sent" — the default visibility
      (Provider + requester + subject) includes the requester.
+
+## Scenario: a fixed-duration expiration preset is set on the request and shown to the provider before they decide
+
+1. Manager AAA signs in, opens the Dashboard's "My subordinates" tab, and from AAA One's
+   card's Feedback dropdown chooses "Request feedback about AAA One".
+   - *Expected*: the request-feedback screen opens.
+2. Manager AAA adds AAA Three as a provider, picks "In 1 week" from the Expiration select, and
+   clicks "Request".
+   - *Expected*: the request is created carrying the resolved `expiresOn` date one week out;
+     Manager AAA signs out.
+3. AAA Three signs in and opens the request.
+   - *Expected*: the "Feedback request" triage screen shows an "Expires on" row with that same
+     date, before AAA Three accepts or rejects.
+4. AAA Three clicks "Reject" and confirms in the dialog.
+   - *Expected*: the request is rejected (closing the row so the triple stays free for a rerun
+     of this file); AAA Three signs out.
+
+## Not covered here (and why)
+
+The time-based auto-reject sweep (a REQUESTED row's `expiresOn` actually elapsing) is a
+server-side behavior with no UI to drive it deterministically — covered by
+`FeedbackExpiryTest` (server test suite), not here.

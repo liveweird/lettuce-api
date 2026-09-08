@@ -3,6 +3,7 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import sonarjs from 'eslint-plugin-sonarjs'
+import eslintComments from '@eslint-community/eslint-plugin-eslint-comments'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
@@ -21,6 +22,9 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    plugins: {
+      '@eslint-community/eslint-comments': eslintComments,
+    },
     rules: {
       // The route tree (`appRoutes`, App.tsx) is the one non-component export that lives
       // beside the shell it composes — a data router wants route objects, not a component.
@@ -34,7 +38,14 @@ export default defineConfig([
 
       // ── Quality gates (the frontend counterpart of config/detekt/detekt.yml) ─────────
       // Policy: fix findings in code first; tune a rule here ONLY for a deliberate repo
-      // idiom, with a comment naming it. No inline eslint-disable without a comment.
+      // idiom, with a comment naming it. No inline eslint-disable without a comment — enforced
+      // by require-description below (Checkup #34 Tier A): a bare disable rots into an
+      // unexplained suppression nobody dares remove. `eslint-enable` is exempted — its
+      // justification lives on the matching `eslint-disable` it closes, not on itself.
+      '@eslint-community/eslint-comments/require-description': [
+        'error',
+        { ignore: ['eslint-enable'] },
+      ],
 
       // JSX conditional chains (`cond ? … : cond2 ? … : …`) are idiomatic React rendering.
       'sonarjs/no-nested-conditional': 'off',

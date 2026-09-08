@@ -10,7 +10,7 @@ import { jsonResponse } from "../test/http";
 // props our component passes (the ViewTeamKpi mock precedent). BarChart exposes the buckets
 // and per-bar colors via data-* attrs and renders the custom tooltip once for inspection.
 vi.mock("@mantine/charts", () => ({
-  /* eslint-disable @typescript-eslint/no-explicit-any */
+  /* eslint-disable @typescript-eslint/no-explicit-any -- typing the mocked BarChart/ChartTooltip props against @mantine/charts' real generics isn't worth it in a test-only stub */
   BarChart: ({ data, tooltipProps }: any) => (
     <div
       data-testid="bar-chart"

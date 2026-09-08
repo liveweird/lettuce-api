@@ -41,6 +41,23 @@ fi
     exit 1
 }
 
+# Checkup #34 Tier A pin: the app's single-replica in-memory state (login lockout, MFA
+# challenges) requires Recreate, never a RollingUpdate overlap, and the pod must run
+# non-root — a future edit dropping either regresses silently otherwise.
+[[ "$(awk '
+    $0 == "  strategy:" { in_strategy = 1; next }
+    in_strategy && $0 ~ /^  [^ ]/ { in_strategy = 0 }
+    in_strategy && $1 == "type:" && $2 == "Recreate" { count++ }
+    END { print count + 0 }
+' "$RENDERED")" == '1' ]] || {
+    printf 'FAIL: rendered manifest does not set spec.strategy.type: Recreate\n' >&2
+    exit 1
+}
+[[ "$(awk '$1 == "runAsNonRoot:" && $2 == "true" { count++ } END { print count + 0 }' "$RENDERED")" -ge '1' ]] || {
+    printf 'FAIL: rendered manifest does not set runAsNonRoot: true\n' >&2
+    exit 1
+}
+
 expect_failure 'missing image reference' "$RENDERER"
 expect_failure 'extra argument' "$RENDERER" "$VALID_IMAGE" unexpected
 expect_failure 'local latest tag' "$RENDERER" 'lettuce-app:latest'

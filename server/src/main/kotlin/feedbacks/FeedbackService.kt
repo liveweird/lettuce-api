@@ -313,7 +313,10 @@ class FeedbackService(val database: R2dbcDatabase, private val cipher: FieldCiph
      * Moves a feedback to [target] via the status state machine and returns the notifications the
      * transition should produce (the caller persists them). Returns null when the row is missing
      * (→ 404); throws [ConflictException] (→ 409) when the transition is not allowed from the
-     * current status.
+     * current status, OR when the UPDATE below affects zero rows because a concurrent call already
+     * moved the row out of the status this call observed (e.g. a pick-up racing a reject) — the
+     * domain-guard retry shape: the caller re-reads and either retries or gives up, never silently
+     * overwriting a status nobody chose.
      */
     suspend fun transition(id: UInt, target: FeedbackStatus): List<Notification>? {
         return suspendTransaction(database) {
@@ -337,9 +340,17 @@ class FeedbackService(val database: R2dbcDatabase, private val cipher: FieldCiph
                     )
                 }
             }
-            Feedbacks.update({ (Feedbacks.id eq id) and (Feedbacks.markedAsDeleted eq false) }) {
+            // The status predicate is load-bearing: without it, a transition racing another one
+            // from the SAME observed current.status (e.g. two REQUESTED->* actions) would blindly
+            // overwrite whatever the other one just wrote instead of losing the race.
+            val updated = Feedbacks.update({
+                (Feedbacks.id eq id) and (Feedbacks.markedAsDeleted eq false) and (Feedbacks.status eq current.status)
+            }) {
                 it[status] = target
                 it[lastModified] = System.currentTimeMillis()
+            }
+            if (updated == 0) {
+                throw ConflictException("Feedback status changed concurrently; retry")
             }
             val next = current.copy(status = target)
             val managers = resolveSubjectManagers(next)
@@ -355,41 +366,59 @@ class FeedbackService(val database: R2dbcDatabase, private val cipher: FieldCiph
     }
 
     /**
-     * The lazy expiry sweep (v3.8.0 — no background job, the `AlertService.visible(now)`
-     * precedent): flips every active `REQUESTED` row whose `expiresOn` deadline has passed
-     * (`expires_on < today`, ISO string compare — lexicographic == chronological) to `REJECTED`,
-     * bumping `lastModified`, and returns one [ExpiredOutcome] per flipped row for the caller
-     * (the feedback list route) to persist exactly like the manual `POST …/reject` path. One
-     * `suspendTransaction`, so the select-then-update is atomic; idempotent — a row already
-     * flipped no longer matches the `REQUESTED` predicate, so a second call selects nothing.
-     * [today] is injectable, the `validateGoalDueDate` testability pattern.
+     * The lazy expiry sweep (v3.8.0 — no background job): flips every active `REQUESTED` row
+     * whose `expiresOn` deadline has passed (`expires_on < today`, ISO string compare —
+     * lexicographic == chronological) to `REJECTED`, bumping `lastModified`, and returns one
+     * [ExpiredOutcome] per row the UPDATE below actually flipped, for the caller (the feedback
+     * list route) to persist exactly like the manual `POST …/reject` path. Built via
+     * `updateReturning` rather than a separate SELECT-then-UPDATE: the outcome list is derived
+     * ONLY from the rows the database actually locked and flipped inside this `suspendTransaction`,
+     * so a row a concurrent transition (e.g. a pick-up) moves out of `REQUESTED` between two
+     * otherwise-independent calls is simply absent from the result — never a false expiry event/
+     * notification for a row that is no longer overdue-REQUESTED by the time it is touched.
+     * Idempotent — a row already flipped no longer matches the `REQUESTED` predicate, so a second
+     * call returns nothing for it. [today] is injectable, the `validateGoalDueDate` testability
+     * pattern.
      */
     suspend fun expireOverdueRequests(today: LocalDate = LocalDate.now()): List<ExpiredOutcome> =
         suspendTransaction(database) {
             val todayIso = today.toString()
-            val overdueRows = Feedbacks
-                .selectAll()
-                .where {
+            // Materialize the returning rows FIRST (closing that result cursor) before running
+            // any further query below — resolvePartyNames() must not interleave with an open
+            // result stream on the same connection.
+            val flipped = Feedbacks.updateReturning(
+                returning = listOf(
+                    Feedbacks.id,
+                    Feedbacks.requesterId,
+                    Feedbacks.subjectId,
+                    Feedbacks.providerId,
+                    Feedbacks.visibility,
+                ),
+                where = {
                     (Feedbacks.status eq FeedbackStatus.REQUESTED) and
                         Feedbacks.expiresOn.isNotNull() and
                         (Feedbacks.expiresOn less todayIso) and
                         active()
-                }
-                .toList()
-            if (overdueRows.isEmpty()) return@suspendTransaction emptyList()
-
-            val overdue = overdueRows.map { it[Feedbacks.id].value to it.toFeedback() }
-            val ids = overdue.map { it.first }
-            Feedbacks.update({
-                (Feedbacks.id inList ids) and (Feedbacks.status eq FeedbackStatus.REQUESTED) and active()
-            }) {
+                },
+            ) {
                 it[status] = FeedbackStatus.REJECTED
                 it[lastModified] = System.currentTimeMillis()
-            }
-            overdue.map { (id, feedback) ->
+            }.toList()
+
+            flipped.map { row ->
+                // A REQUESTED feedback is always single-recipient (validateSubjects), so the
+                // anchor subjectId is the whole recipient set — no join-table read needed. status
+                // is REQUESTED by construction (the WHERE clause above), not selected again.
+                val feedback = Feedback(
+                    requesterId = row[Feedbacks.requesterId]?.value,
+                    subjectId = row[Feedbacks.subjectId].value,
+                    providerId = row[Feedbacks.providerId].value,
+                    visibility = row[Feedbacks.visibility],
+                    status = FeedbackStatus.REQUESTED,
+                )
                 val names = resolvePartyNames(feedback)
                 ExpiredOutcome(
-                    feedbackId = id,
+                    feedbackId = row[Feedbacks.id].value,
                     providerId = feedback.providerId,
                     notifications = listOf(
                         feedbackExpiredToRequesterNotification(feedback, names),

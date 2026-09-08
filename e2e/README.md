@@ -107,7 +107,7 @@ scenario file is the design.
 - [`feedback-delivery.spec.ts`](scenarios/feedback-delivery.md) — the receiving side: draft invisibility, Received list, bell deep link.
 - [`feedback-lifecycle-rest.spec.ts`](scenarios/feedback-lifecycle-rest.md) — create-as-SENT, provider draft delete, History/Lifecycle tabs.
 - [`feedback-provide.spec.ts`](scenarios/feedback-provide.md) — provide → draft → send → withdraw (entry via the /feedback New-feedback button + the multi-recipient picker — AAA Two + AAA Three, v3.1.0; the view page names both).
-- [`feedback-request-third-party.spec.ts`](scenarios/feedback-request-third-party.md) — manager requests feedback about a subordinate from a third party; requester message rides along.
+- [`feedback-request-third-party.spec.ts`](scenarios/feedback-request-third-party.md) — manager requests feedback about a subordinate from a third party; requester message rides along; the v3.8.0 expiration-preset picker sets a deadline the provider sees before deciding.
 - [`feedback-request-triage.spec.ts`](scenarios/feedback-request-triage.md) — ask → accept → send; and reject.
 - [`goals.spec.ts`](scenarios/goals.md) — the goal lifecycle, PLAN milestones, chain-manager visibility, the skip-level chain create (v2.33.0), notifications, the dirty-form navigation guard — a sidebar click held by the discard confirm (v3.6.0).
 - [`hr.spec.ts`](scenarios/hr.md) — the HR auditor reads a private draft via the Audit section + the guarded career timeline (2026-08); admin gets no audit surface.

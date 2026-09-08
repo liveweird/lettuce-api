@@ -43,7 +43,7 @@ describe("FeedbackHistory", () => {
     expect(screen.getAllByText(/Paula/).length).toBeGreaterThan(0);
   });
 
-  test("renders the auto-expiry sentence for a REQUEST_EXPIRED event", async () => {
+  test("renders the auto-expiry sentence for a REQUEST_EXPIRED event, with the system label as actor (never the provider's name)", async () => {
     mockFetch.mockResolvedValue(
       jsonResponse(200, {
         items: [
@@ -54,6 +54,10 @@ describe("FeedbackHistory", () => {
     renderWithProviders(<FeedbackHistory feedbackId={5} />);
 
     expect(await screen.findByText("The feedback request expired.")).toBeInTheDocument();
+    // The event is stored against the provider (Paula) for schema reasons only — the automated
+    // flip must render as "Automatic", never her name.
+    expect(await screen.findByText(/Automatic/)).toBeInTheDocument();
+    expect(screen.queryByText(/Paula/)).toBeNull();
   });
 
   test("shows an empty-state note when there are no events", async () => {
