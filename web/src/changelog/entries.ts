@@ -17,6 +17,12 @@ interface ChangelogEntry {
 
 export const CHANGELOG: readonly ChangelogEntry[] = [
   {
+    version: "3.8.0",
+    date: "2026-09-08",
+    en: `Requesting feedback now lets you attach an optional deadline — no expiration (as before), in 1 week, 2 weeks, 30 days, or a date you pick. The provider sees the deadline on the request. If nobody picks it up or declines by then, it is automatically declined, and both of you get a notification and a history entry recording it.`,
+    pl: `Zamawiając feedback, możesz teraz opcjonalnie ustawić termin ważności prośby — bez terminu (jak dotychczas), za tydzień, za 2 tygodnie, za 30 dni, albo wybraną datę. Wystawiający widzi ten termin przy prośbie. Jeśli nikt jej nie przyjmie ani nie odrzuci do tego czasu, prośba zostaje automatycznie odrzucona, a obie strony dostają powiadomienie i wpis w historii.`,
+  },
+  {
     version: "3.7.0",
     date: "2026-09-08",
     en: `Every "pick a person" list — feedback recipients, a report for a 1:1/goal/review/days-off request, a succession candidate, a team's manager — now shows each person's team(s) as a small line under their name, and typing a team name filters the list to that team's members. The picked name itself still shows and saves exactly as before, with no team text attached.`,

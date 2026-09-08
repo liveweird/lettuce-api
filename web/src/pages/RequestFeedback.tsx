@@ -22,6 +22,7 @@ import { getUserId, hasFeature } from "../api/session";
 import { checkFeedbackDuplicate, createFeedback, type FeedbackVisibility } from "../api/feedbacks";
 import DiscardGuard from "../components/DiscardGuard";
 import EmptyState from "../components/EmptyState";
+import FeedbackExpirationField from "../components/FeedbackExpirationField";
 import FormFooter from "../components/FormFooter";
 import MetaStrip from "../components/MetaStrip";
 import PageHeader from "../components/PageHeader";
@@ -29,6 +30,7 @@ import PersonaChip from "../components/PersonaChip";
 import { renderUserOption, userOption } from "../components/userOptions";
 import { useDiscardGuard } from "../hooks/useDiscardGuard";
 import { REQUESTER_VISIBILITIES } from "../utils/feedbackVisibility";
+import { resolveFeedbackExpiresOn, type ExpirationPreset } from "../utils/feedbackForm";
 import { saveErrorMessage } from "../utils/saveError";
 import { showSuccessToast } from "../utils/toast";
 import { invalidateFeedback } from "../utils/feedbackQueries";
@@ -62,6 +64,9 @@ export default function RequestFeedback() {
   const [pick, setPick] = useState<string | null>(null);
   const [visibility, setVisibility] = useState<FeedbackVisibility>(DEFAULT_VISIBILITY);
   const [message, setMessage] = useState("");
+  // The expiration control (v3.8.0): one value applies to every provider in the batch below.
+  const [expirationPreset, setExpirationPreset] = useState<ExpirationPreset>("none");
+  const [customExpiresOn, setCustomExpiresOn] = useState("");
   // A failed submit round: how many requests went out, and per failed provider the reason.
   // The succeeded providers leave the list, so a resubmit retries exactly the failures.
   const [partial, setPartial] = useState<{
@@ -70,9 +75,14 @@ export default function RequestFeedback() {
     failures: { name: string; reason: string }[];
   } | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  // The one cancel guard (v3.5.0): picked providers, a typed note, or a changed visibility.
+  // The one cancel guard (v3.5.0): picked providers, a typed note, a changed visibility, or a
+  // chosen expiration.
   const { requestCancel, guardProps } = useDiscardGuard({
-    isDirty: selected.length > 0 || message !== "" || visibility !== DEFAULT_VISIBILITY,
+    isDirty:
+      selected.length > 0 ||
+      message !== "" ||
+      visibility !== DEFAULT_VISIBILITY ||
+      expirationPreset !== "none",
     to: backTo,
     title: t("feedback.discardRequestTitle"),
     message: t("feedback.discardRequestMessage"),
@@ -145,6 +155,7 @@ export default function RequestFeedback() {
     // One create per provider, SEQUENTIALLY with per-provider outcomes (v2.24.0 — the old
     // Promise.all short-circuited on the first rejection, hiding which requests were already
     // created and 409-ing the survivors on resubmit). Successes leave the list immediately.
+    const expiresOn = resolveFeedbackExpiresOn(expirationPreset, customExpiresOn);
     const failures: { provider: Provider; err: unknown }[] = [];
     for (const p of selected) {
       try {
@@ -156,6 +167,7 @@ export default function RequestFeedback() {
           status: "REQUESTED",
           content: "",
           requesterMessage: message.trim() || undefined,
+          expiresOn,
         });
       } catch (err) {
         failures.push({ provider: p, err });
@@ -232,6 +244,13 @@ export default function RequestFeedback() {
               autosize
               minRows={2}
               maxRows={6}
+            />
+
+            <FeedbackExpirationField
+              preset={expirationPreset}
+              onPresetChange={setExpirationPreset}
+              customDate={customExpiresOn}
+              onCustomDateChange={setCustomExpiresOn}
             />
 
             <Group align="flex-end" gap="sm">

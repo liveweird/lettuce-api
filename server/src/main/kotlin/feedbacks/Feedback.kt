@@ -1,10 +1,12 @@
 package ch.nokillswit.feedbacks
 
 import ch.nokillswit.infra.paging.PageResponse
+import ch.nokillswit.infra.parseIsoDateStrict
 import io.ktor.server.plugins.BadRequestException
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
+import java.time.LocalDate
 
 // Free-text limits enforced up-front (400, the validateAlert idiom) — both columns are
 // unbounded `text` (encrypted at rest), so without these the only backstop would be
@@ -43,6 +45,23 @@ internal fun validateSubjects(feedback: Feedback) {
     if (feedback.requesterId != null && ids.size > 1) {
         throw BadRequestException("A requested feedback must have exactly one subject")
     }
+}
+
+/**
+ * The `expiresOn` rule (v3.8.0), checked at CREATE only from the route (`FeedbackRoutes.kt`,
+ * after the authz guard — 403 wins over 400): meaningful only while `status == REQUESTED`, a
+ * strict ISO date (`parseIsoDateStrict`), and not in the past. Injectable [today] mirrors
+ * `validateGoalDueDate`'s testability pattern (`goals/Goal.kt`). `expiresOn == null` is always
+ * fine (indefinite, today's behaviour) — the field is otherwise set once and never updated
+ * (`FeedbackService.update`/`editContent` omit the column, the `requesterMessage` precedent).
+ */
+internal fun validateFeedbackExpiry(status: FeedbackStatus, expiresOn: String?, today: LocalDate = LocalDate.now()) {
+    if (expiresOn == null) return
+    if (status != FeedbackStatus.REQUESTED) {
+        throw BadRequestException("Expiration applies only to requested feedback")
+    }
+    val parsed = parseIsoDateStrict(expiresOn, "expiresOn")
+    if (parsed < today) throw BadRequestException("expiresOn must not be in the past")
 }
 
 @Serializable
@@ -87,6 +106,10 @@ data class FeedbackCreateRequest(
     val status: FeedbackStatus,
     val content: String = "",
     val requesterMessage: String? = null,
+    // Optional deadline on a REQUESTED request (v3.8.0): set once at creation, ignored by PUT
+    // (the requesterMessage precedent). Meaningful only while REQUESTED — see
+    // validateFeedbackExpiry.
+    val expiresOn: String? = null,
 ) {
     fun toFeedback() = Feedback(
         requesterId = requesterId,
@@ -97,6 +120,7 @@ data class FeedbackCreateRequest(
         status = status,
         content = content,
         requesterMessage = requesterMessage,
+        expiresOn = expiresOn,
     )
 }
 
@@ -113,6 +137,9 @@ data class Feedback(
     val content: String = "",
     // Requester's clarification note to the provider; set at creation only, never editable afterward.
     val requesterMessage: String? = null,
+    // Optional REQUESTED-only deadline (v3.8.0, ISO date); set at creation only, never editable
+    // afterward — see validateFeedbackExpiry and FeedbackService.expireOverdueRequests.
+    val expiresOn: String? = null,
     // Server-managed: set on every create/update; never part of a request body (see FeedbackCreateRequest).
     val lastModified: Long = 0L,
 ) {
@@ -139,6 +166,9 @@ data class FeedbackResponse(
     val status: FeedbackStatus,
     val content: String,
     val requesterMessage: String? = null,
+    // Optional REQUESTED-only deadline (v3.8.0). Null = indefinite, or the request already left
+    // REQUESTED (the value is inert past that point — see validateFeedbackExpiry).
+    val expiresOn: String? = null,
     val lastModified: Long,
     // Resolved party display names; null when not resolved (e.g. no requester).
     val requesterName: String? = null,
@@ -158,6 +188,7 @@ fun Feedback.toResponse(
         id, requesterId, subjectId, providerId, visibility, status,
         content = if (includeContent) content else "",
         requesterMessage = requesterMessage,
+        expiresOn = expiresOn,
         lastModified = lastModified,
         requesterName = requesterId?.let { names[it] },
         subjectName = names[subjectId],
@@ -181,6 +212,8 @@ data class FeedbackListItem(
     val providerDeleted: Boolean,
     val visibility: FeedbackVisibility,
     val status: FeedbackStatus,
+    // Optional REQUESTED-only deadline (v3.8.0) — see FeedbackResponse.expiresOn.
+    val expiresOn: String? = null,
     val contentPreview: String,
     // Full (uncapped) content — populated for view=kudos only, whose wall expands cards inline;
     // every kudos row is PUBLIC+SENT, so this never widens what the caller may read.

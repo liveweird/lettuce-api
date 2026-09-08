@@ -9,6 +9,7 @@ import ch.nokillswit.feedbacks.FeedbackEventType
 import ch.nokillswit.feedbacks.FeedbackStatus
 import ch.nokillswit.feedbacks.FeedbackVisibility
 import ch.nokillswit.feedbacks.feedbackCreationEvent
+import ch.nokillswit.feedbacks.feedbackExpiryEvent
 import ch.nokillswit.feedbacks.feedbackUpdateEvent
 import io.ktor.client.call.body
 import io.ktor.client.request.delete
@@ -61,6 +62,13 @@ class FeedbackEventsTest {
             feedbackUpdateEvent(base, base.copy(content = "b", visibility = FeedbackVisibility.PUBLIC))?.type,
         )
         assertNull(feedbackUpdateEvent(base, base.copy()))
+    }
+
+    @Test
+    fun `expiry descriptor carries no params — the sentence carries no actor`() {
+        val expiry = feedbackExpiryEvent()
+        assertEquals(FeedbackEventType.REQUEST_EXPIRED, expiry.type)
+        assertEquals(emptyMap(), expiry.params)
     }
 
     // ---- integration ----

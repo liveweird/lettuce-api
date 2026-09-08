@@ -395,6 +395,35 @@ describe("ViewFeedback page", () => {
     expect(screen.getByText("Delivered note")).toBeInTheDocument();
   });
 
+  test("a REQUESTED feedback with an expiration shows the deadline row", async () => {
+    mockFetch.mockResolvedValue(
+      jsonResponse(200, { ...FEEDBACK, status: "REQUESTED", expiresOn: "2099-06-15" }),
+    );
+    renderViewFeedback();
+
+    expect(await screen.findByText("Expires on")).toBeInTheDocument();
+    expect(screen.getByText("Jun 15, 2099")).toBeInTheDocument();
+  });
+
+  test("a REQUESTED feedback with no expiration shows no deadline row", async () => {
+    mockFetch.mockResolvedValue(jsonResponse(200, { ...FEEDBACK, status: "REQUESTED" }));
+    renderViewFeedback();
+
+    await screen.findByLabelText("Status");
+    expect(screen.queryByText("Expires on")).toBeNull();
+  });
+
+  test("a SENT feedback with an expiration value does not show the deadline row", async () => {
+    // expiresOn is inert once the row leaves REQUESTED (set-once, never editable).
+    mockFetch.mockResolvedValue(
+      jsonResponse(200, { ...FEEDBACK, status: "SENT", expiresOn: "2099-06-15" }),
+    );
+    renderViewFeedback();
+
+    await screen.findByLabelText("Status");
+    expect(screen.queryByText("Expires on")).toBeNull();
+  });
+
   test("a non-requester viewing a REQUESTED feedback still sees Content", async () => {
     // Caller (userId 7) is not the requester (requesterId 9) → the gate does not apply.
     mockFetch.mockResolvedValue(

@@ -27,6 +27,10 @@ enum class NotificationType {
     FEEDBACK_WITHDRAWN_TO_SUBJECT,
     FEEDBACK_WITHDRAWN_TO_REQUESTER,
     FEEDBACK_DELETED_TO_REQUESTER,
+    // The lazy expiry sweep (v3.8.0 — FeedbackService.expireOverdueRequests) auto-rejecting an
+    // overdue REQUESTED row; both parties are told.
+    FEEDBACK_REQUEST_EXPIRED_TO_REQUESTER,
+    FEEDBACK_REQUEST_EXPIRED_TO_PROVIDER,
     ONE_ON_ONE_CREATED_TO_SUBORDINATE,
     ONE_ON_ONE_CREATED_TO_MANAGER,
     GOAL_ACTIVATED_TO_SUBORDINATE,
@@ -84,6 +88,8 @@ val NotificationType.feature: Feature?
         NotificationType.FEEDBACK_WITHDRAWN_TO_SUBJECT,
         NotificationType.FEEDBACK_WITHDRAWN_TO_REQUESTER,
         NotificationType.FEEDBACK_DELETED_TO_REQUESTER,
+        NotificationType.FEEDBACK_REQUEST_EXPIRED_TO_REQUESTER,
+        NotificationType.FEEDBACK_REQUEST_EXPIRED_TO_PROVIDER,
         -> Feature.FEEDBACKS
         NotificationType.ONE_ON_ONE_CREATED_TO_SUBORDINATE,
         NotificationType.ONE_ON_ONE_CREATED_TO_MANAGER,

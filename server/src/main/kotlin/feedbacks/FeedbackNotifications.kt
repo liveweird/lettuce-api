@@ -217,6 +217,44 @@ internal fun feedbackDeletionNotifications(
     )
 }
 
+// Params shared by both v3.8.0 expiry notifications — the FEEDBACK_REJECTED_TO_REQUESTER shape.
+// A REQUESTED feedback is always single-recipient and always carries a requester
+// (validateSubjects / FeedbackService.validate), so both are safe to resolve here.
+private fun Feedback.expiryParams(nameById: Map<UInt, String>): Map<String, String> = mapOf(
+    "requester" to (requesterId?.let { nameById.nameOf(it) } ?: "?"),
+    "provider" to nameById.nameOf(providerId),
+    "subject" to subjectLabel(nameById),
+)
+
+/**
+ * Notification telling the REQUESTER their feedback request expired unanswered — minted by the
+ * lazy sweep (v3.8.0, `FeedbackService.expireOverdueRequests`). A REQUESTED feedback always
+ * carries a requester (`FeedbackService.validate`), so [Feedback.requesterId] is required.
+ */
+internal fun feedbackExpiredToRequesterNotification(
+    feedback: Feedback,
+    nameById: Map<UInt, String>,
+): Notification {
+    val requesterId = requireNotNull(feedback.requesterId) {
+        "expireOverdueRequests only sweeps REQUESTED rows, which always carry a requester"
+    }
+    return Notification(
+        recipientId = requesterId,
+        type = NotificationType.FEEDBACK_REQUEST_EXPIRED_TO_REQUESTER,
+        params = feedback.expiryParams(nameById),
+    )
+}
+
+/** The provider's mirror of [feedbackExpiredToRequesterNotification]. */
+internal fun feedbackExpiredToProviderNotification(
+    feedback: Feedback,
+    nameById: Map<UInt, String>,
+): Notification = Notification(
+    recipientId = feedback.providerId,
+    type = NotificationType.FEEDBACK_REQUEST_EXPIRED_TO_PROVIDER,
+    params = feedback.expiryParams(nameById),
+)
+
 // The `subject` param rule for a multi-recipient feedback (v3.1.0): a note addressed TO a
 // recipient carries that recipient's own name; a MANAGER's note names only the recipients who
 // report to them (v3.1.1 — the template says "who reports to you"); every other note carries

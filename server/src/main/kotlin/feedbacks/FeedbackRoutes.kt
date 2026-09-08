@@ -35,6 +35,7 @@ import io.ktor.server.resources.put
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.routing.routing
+import java.time.LocalDate
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -128,6 +129,17 @@ fun Application.configureFeedbackRoutes() {
         authenticate {
             get<Feedbacks> {
                 val caller = call.feedbackCaller()
+                // The lazy expiry sweep (v3.8.0 — no background job, the AlertService.visible(now)
+                // precedent): flip overdue REQUESTED rows to REJECTED and persist their event +
+                // notifications exactly like the manual `POST …/reject` path, so the list built
+                // below already reflects them (the write-during-a-GET TokenBlocklistService
+                // precedent).
+                feedbackService.expireOverdueRequests(LocalDate.now()).forEach { outcome ->
+                    outcome.notifications.forEach { notificationService.create(it) }
+                    feedbackEventService.create(
+                        feedbackExpiryEvent().toEvent(outcome.feedbackId, outcome.providerId),
+                    )
+                }
                 val params = call.request.queryParameters
                 val view = when (val raw = params.optionalString("view") ?: "received") {
                     "received" -> FeedbackListView.RECEIVED
@@ -213,6 +225,10 @@ fun Application.configureFeedbackRoutes() {
                 // the service's validate(), but here BEFORE the deactivation check so a
                 // malformed set is reported as such rather than by a member it names twice.
                 validateSubjects(feedback)
+                // The optional expiresOn deadline (v3.8.0): REQUESTED-only, strict ISO, not in
+                // the past. Feature-local, route-side (not FeedbackService.validate()) — mirrors
+                // validateSubjects' placement, after the party guard, before the deactivation check.
+                validateFeedbackExpiry(feedback.status, feedback.expiresOn)
                 // After the authz guard (403 wins over 400): no NEW feedback involving a
                 // deactivated party. The caller is one of them and holds a session, so this
                 // can only trip on the OTHER parties — including them all is simplest.

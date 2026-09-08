@@ -166,6 +166,14 @@ private fun sentences(type: NotificationType, p: Map<String, String>): Localized
             en = "${p.v("provider")} withdrew their feedback about ${p.v("subject")} (which you requested).",
             pl = "${p.v("provider")} wycofał/a swój feedback na temat ${p.v("subject")} (o który prosiłeś/aś).",
         )
+    NotificationType.FEEDBACK_REQUEST_EXPIRED_TO_REQUESTER -> LocalizedText(
+        en = "Your feedback request to ${p.v("provider")} about ${p.v("subject")} expired.",
+        pl = "Twoja prośba o feedback do ${p.v("provider")} na temat ${p.v("subject")} wygasła.",
+    )
+    NotificationType.FEEDBACK_REQUEST_EXPIRED_TO_PROVIDER -> LocalizedText(
+        en = "The feedback request from ${p.v("requester")} about ${p.v("subject")} expired.",
+        pl = "Prośba o feedback od ${p.v("requester")} na temat ${p.v("subject")} wygasła.",
+    )
     NotificationType.FEEDBACK_DELETED_TO_REQUESTER ->
         if (p["self"] == "self") LocalizedText(
             en = "${p.v("provider")} deleted their self-reflection (which you requested).",

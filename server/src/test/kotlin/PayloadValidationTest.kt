@@ -381,6 +381,53 @@ class PayloadValidationTest {
     }
 
     @Test
+    fun `feedback expiresOn is validated — REQUESTED-only, strict ISO, not in the past`() = testApplication {
+        usePostgresTestcontainer()
+        val requesterEmail = uniqueEmail("fb-exp")
+        val requesterId = TestUsers.seed(email = requesterEmail, password = "pw-123456789", roles = emptySet())
+        val providerId = TestUsers.seed(email = uniqueEmail("fb-exp-p"), password = "pw", roles = emptySet())
+        val client = authedClient(requesterEmail, "pw-123456789")
+
+        suspend fun createRequested(expiresOn: String?) = client.post("/api/v1/feedbacks") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                FeedbackCreateRequest(
+                    requesterId = requesterId,
+                    subjectId = requesterId,
+                    providerId = providerId,
+                    visibility = FeedbackVisibility.PROVIDER_REQUESTER_SUBJECT,
+                    status = FeedbackStatus.REQUESTED,
+                    expiresOn = expiresOn,
+                ),
+            )
+        }
+
+        // Malformed date.
+        assertEquals(HttpStatusCode.BadRequest, createRequested("not-a-date").status)
+        // In the past.
+        assertEquals(HttpStatusCode.BadRequest, createRequested("2020-01-01").status)
+        // Valid: not in the past, strict ISO.
+        val ok = createRequested("2099-12-31")
+        assertEquals(HttpStatusCode.Created, ok.status)
+        assertEquals("2099-12-31", ok.body<FeedbackResponse>().expiresOn)
+
+        // Non-REQUESTED status with an expiresOn is rejected (a DRAFT never expires).
+        val draftWithExpiry = client.post("/api/v1/feedbacks") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                FeedbackCreateRequest(
+                    subjectId = providerId,
+                    providerId = requesterId,
+                    visibility = FeedbackVisibility.PROVIDER_SUBJECT,
+                    status = FeedbackStatus.DRAFT,
+                    expiresOn = "2099-12-31",
+                ),
+            )
+        }
+        assertEquals(HttpStatusCode.BadRequest, draftWithExpiry.status)
+    }
+
+    @Test
     fun `a wrong-method call answers 405 with a problem body`() = testApplication {
         usePostgresTestcontainer()
         // Routing's method-mismatch rejection used to be a bodiless 405 (MT-004; API-ERR-001).

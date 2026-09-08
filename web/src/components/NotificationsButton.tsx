@@ -68,6 +68,8 @@ const EVENT_KEY: Record<NotificationItem["type"], string> = {
   FEEDBACK_WITHDRAWN_TO_SUBJECT: "withdrawnToSubject",
   FEEDBACK_WITHDRAWN_TO_REQUESTER: "withdrawnToRequester",
   FEEDBACK_DELETED_TO_REQUESTER: "deletedToRequester",
+  FEEDBACK_REQUEST_EXPIRED_TO_REQUESTER: "requestExpiredToRequester",
+  FEEDBACK_REQUEST_EXPIRED_TO_PROVIDER: "requestExpiredToProvider",
   ONE_ON_ONE_CREATED_TO_SUBORDINATE: "oneOnOneCreated",
   ONE_ON_ONE_CREATED_TO_MANAGER: "oneOnOneCreatedToManager",
   GOAL_ACTIVATED_TO_SUBORDINATE: "goalActivated",
@@ -218,6 +220,9 @@ const TYPE_META: Record<NotificationItem["type"], { icon: typeof IconBell; color
   FEEDBACK_WITHDRAWN_TO_SUBJECT: { icon: IconArrowBackUp, color: "orange" },
   FEEDBACK_WITHDRAWN_TO_REQUESTER: { icon: IconArrowBackUp, color: "orange" },
   FEEDBACK_DELETED_TO_REQUESTER: { icon: IconTrash, color: "gray" },
+  // The auto-expiry pair (v3.8.0): distinct from the manual-reject red — a system-driven decline.
+  FEEDBACK_REQUEST_EXPIRED_TO_REQUESTER: { icon: IconX, color: "gray" },
+  FEEDBACK_REQUEST_EXPIRED_TO_PROVIDER: { icon: IconX, color: "gray" },
   ONE_ON_ONE_CREATED_TO_SUBORDINATE: { icon: IconCalendarEvent, color: "grape" },
   ONE_ON_ONE_CREATED_TO_MANAGER: { icon: IconCalendarEvent, color: "grape" },
   GOAL_ACTIVATED_TO_SUBORDINATE: { icon: IconTargetArrow, color: "teal" },

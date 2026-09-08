@@ -5,6 +5,8 @@ import ch.nokillswit.feedbacks.FeedbackStatus
 import ch.nokillswit.feedbacks.FeedbackVisibility
 import ch.nokillswit.feedbacks.feedbackCreationNotifications
 import ch.nokillswit.feedbacks.feedbackDeletionNotifications
+import ch.nokillswit.feedbacks.feedbackExpiredToProviderNotification
+import ch.nokillswit.feedbacks.feedbackExpiredToRequesterNotification
 import ch.nokillswit.feedbacks.feedbackTransitionNotifications
 import ch.nokillswit.notifications.NotificationType
 import kotlin.test.Test
@@ -559,5 +561,40 @@ class FeedbackNotificationsTest {
             requesterId = null,
         )
         assertTrue(feedbackDeletionNotifications(deleted, names).isEmpty())
+    }
+
+    // ── Request expiration (v3.8.0) ───────────────────────────────────────────
+
+    @Test
+    fun `an expired request notifies the requester, naming both parties`() {
+        val expired = feedback(FeedbackStatus.REQUESTED) // requesterId = 3u by default
+        val n = feedbackExpiredToRequesterNotification(expired, names)
+        assertEquals(3u, n.recipientId)
+        assertEquals(NotificationType.FEEDBACK_REQUEST_EXPIRED_TO_REQUESTER, n.type)
+        assertEquals(rita, n.params["requester"])
+        assertEquals(pat, n.params["provider"])
+        assertEquals(sam, n.params["subject"])
+        assertNull(n.link)
+    }
+
+    @Test
+    fun `an expired request notifies the provider, naming both parties`() {
+        val expired = feedback(FeedbackStatus.REQUESTED)
+        val n = feedbackExpiredToProviderNotification(expired, names)
+        assertEquals(1u, n.recipientId)
+        assertEquals(NotificationType.FEEDBACK_REQUEST_EXPIRED_TO_PROVIDER, n.type)
+        assertEquals(rita, n.params["requester"])
+        assertEquals(pat, n.params["provider"])
+        assertEquals(sam, n.params["subject"])
+        assertNull(n.link)
+    }
+
+    @Test
+    fun `expiry params fall back to an id placeholder when a name is missing`() {
+        val expired = feedback(FeedbackStatus.REQUESTED)
+        val n = feedbackExpiredToProviderNotification(expired, emptyMap())
+        assertEquals("#3", n.params["requester"])
+        assertEquals("#2", n.params["subject"])
+        assertEquals("#1", n.params["provider"])
     }
 }

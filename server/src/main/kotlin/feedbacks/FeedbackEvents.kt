@@ -19,6 +19,9 @@ enum class FeedbackEventType {
     CONTENT_UPDATED,
     CONTENT_AND_VISIBILITY_UPDATED,
     VISIBILITY_CHANGED,
+    // The lazy expiry sweep auto-rejecting an overdue REQUESTED row (v3.8.0) — see
+    // feedbackExpiryEvent() and FeedbackService.expireOverdueRequests.
+    REQUEST_EXPIRED,
 }
 
 /** A structured audit event: its [type] plus string params (enum names) for interpolation. */
@@ -34,6 +37,16 @@ internal fun feedbackCreationEvent(created: Feedback): FeedbackEventDescriptor =
 /** Structured event recorded when a draft feedback is deleted (soft-deleted) by its provider. */
 internal fun feedbackDeletionEvent(): FeedbackEventDescriptor =
     FeedbackEventDescriptor(FeedbackEventType.DELETED)
+
+/**
+ * Structured event recorded when a REQUESTED feedback auto-rejects past its `expiresOn`
+ * deadline (the lazy sweep, v3.8.0 — `FeedbackService.expireOverdueRequests`). Side-effect-free
+ * and empty-params like [feedbackDeletionEvent] — the rendered sentence carries no actor, so the
+ * event is attributed to the PROVIDER purely because `feedback_events.user_id` is `NOT NULL`
+ * (there is no cheap system-user id); the resolved `userName` on that row is immaterial.
+ */
+internal fun feedbackExpiryEvent(): FeedbackEventDescriptor =
+    FeedbackEventDescriptor(FeedbackEventType.REQUEST_EXPIRED)
 
 /**
  * Structured event recorded on update. A status change wins; otherwise it reports the

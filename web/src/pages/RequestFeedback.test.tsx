@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import RequestFeedback from "./RequestFeedback";
 import { jsonResponse } from "../test/http";
+import { addIsoDays, todayIsoDate } from "../utils/datetime";
 
 const TOKEN_KEY = "lettuce.auth.token";
 const ROLE_KEY = "lettuce.auth.roles";
@@ -353,6 +354,53 @@ describe("RequestFeedback page", () => {
     await addProvider(user, "Alice Provider");
     await user.click(screen.getByRole("button", { name: /^request$/i }));
     await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent("/?tab=peers"));
+  });
+
+  test("a chosen expiration preset resolves to a computed expiresOn on every provider's payload", async () => {
+    setupMocks(mockFetch, () => jsonResponse(201, { id: 99 }));
+    const user = userEvent.setup();
+    renderRequestFeedback();
+
+    await screen.findAllByText("Mona Subject");
+    await user.click(screen.getByRole("combobox", { name: "Expiration" }));
+    await user.click(await screen.findByRole("option", { name: "In 1 week", hidden: true }));
+
+    await addProvider(user, "Alice Provider");
+    await addProvider(user, "Bob Provider");
+    await user.click(screen.getByRole("button", { name: /^request$/i }));
+
+    const expected = addIsoDays(todayIsoDate(), 7);
+    const postCalls = mockFetch.mock.calls.filter(
+      ([url, init]) => url === "/api/v1/feedbacks" && (init as RequestInit | undefined)?.method === "POST",
+    );
+    expect(postCalls).toHaveLength(2);
+    for (const call of postCalls) {
+      expect(JSON.parse((call[1] as RequestInit).body as string).expiresOn).toBe(expected);
+    }
+  });
+
+  test("the custom date pick sends the chosen ISO date as expiresOn", async () => {
+    setupMocks(mockFetch, () => jsonResponse(201, { id: 99 }));
+    const user = userEvent.setup();
+    renderRequestFeedback();
+
+    await screen.findAllByText("Mona Subject");
+    await user.click(screen.getByRole("combobox", { name: "Expiration" }));
+    await user.click(await screen.findByRole("option", { name: "Pick a date…", hidden: true }));
+
+    fireEvent.change(screen.getByLabelText("Expiration date"), { target: { value: "2099-06-15" } });
+
+    await addProvider(user, "Alice Provider");
+    await user.click(screen.getByRole("button", { name: /^request$/i }));
+
+    await waitFor(() => {
+      const postCall = mockFetch.mock.calls.find(
+        ([url, init]) =>
+          url === "/api/v1/feedbacks" && (init as RequestInit | undefined)?.method === "POST",
+      );
+      expect(postCall).toBeDefined();
+      expect(JSON.parse((postCall![1] as RequestInit).body as string).expiresOn).toBe("2099-06-15");
+    });
   });
 
   test("a mid-batch failure keeps only the failed provider listed, with its reason", async () => {

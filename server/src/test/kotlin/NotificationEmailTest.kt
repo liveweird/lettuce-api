@@ -257,4 +257,28 @@ class NotificationEmailTest {
         assertNotNull(content)
         assertTrue("? activated the goal \"?\" for you." in content.body)
     }
+
+    @Test
+    fun `the two request-expiry types word both parties in both languages (v3_8_0)`() {
+        val toRequesterEn = notificationEmailContent(
+            "R", NotificationType.FEEDBACK_REQUEST_EXPIRED_TO_REQUESTER, allParams, null, null, "en",
+        )!!
+        assertTrue("Your feedback request to Pat Provider about Sam Subject expired." in toRequesterEn.body)
+        assertEquals("Lettuce: feedback update", toRequesterEn.subject)
+
+        val toRequesterPl = notificationEmailContent(
+            "R", NotificationType.FEEDBACK_REQUEST_EXPIRED_TO_REQUESTER, allParams, null, null, "pl",
+        )!!
+        assertTrue("Twoja prośba o feedback do Pat Provider na temat Sam Subject wygasła." in toRequesterPl.body)
+
+        val toProviderEn = notificationEmailContent(
+            "R", NotificationType.FEEDBACK_REQUEST_EXPIRED_TO_PROVIDER, allParams, null, null, "en",
+        )!!
+        assertTrue("The feedback request from Rita Requester about Sam Subject expired." in toProviderEn.body)
+
+        val toProviderPl = notificationEmailContent(
+            "R", NotificationType.FEEDBACK_REQUEST_EXPIRED_TO_PROVIDER, allParams, null, null, "pl",
+        )!!
+        assertTrue("Prośba o feedback od Rita Requester na temat Sam Subject wygasła." in toProviderPl.body)
+    }
 }

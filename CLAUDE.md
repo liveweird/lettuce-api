@@ -111,7 +111,7 @@ Each feature's authoritative deep-dive lives in `.claude/docs/features/`. **Befo
 - **Notifications** (`notifications/`, SPA `NotificationsButton`) → `.claude/docs/features/notifications.md` — **the complete table of every situation that mints a notification** (typed structured rows, localized client-side) + the recipient-scoped routes. Read it before ANY change that creates or renders notifications.
 - **Alerts** (`alerts/`, SPA `Alert*`) → `.claude/docs/features/alerts.md` — admin-managed broadcast banners, server-side visibility windowing, the banner/strip UI contract.
 - **Integration API** (`integration/`, SPA `IntegrationClients`) → `.claude/docs/features/integration-api.md` — the v3.0.0 read-only GraphQL surface for other apps: integration clients + show-once API keys (V71), the SDL-first schema (`server/src/main/resources/graphql/schema.graphqls` = the contract, ruled by `api-guidelines/GRAPHQL-GUIDELINES.md`), the deliberate authorization bypass and its v1 scope, DataLoader batching, guardrails, audit events.
-- **Migration catalog** → `.claude/docs/features/migrations.md` — the per-migration V1–V75 history. Read it before adding a migration or reasoning about schema history.
+- **Migration catalog** → `.claude/docs/features/migrations.md` — the per-migration V1–V76 history. Read it before adding a migration or reasoning about schema history.
 
 Users, teams, templates, auth, and dashboard have no separate feature doc: their rules live in `.claude/docs/authorization.md` (per-resource rules incl. `GET /api/v1/dashboard/summary`) and `.claude/docs/security.md` (login/lockout/refresh/password reset, bootstrap seeds).
 

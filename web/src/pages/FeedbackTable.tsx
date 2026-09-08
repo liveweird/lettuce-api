@@ -27,7 +27,7 @@ import ReportsScopeSelect from "../components/ReportsScopeSelect";
 import SortHeader from "../components/SortHeader";
 import { usePagedSort } from "../hooks/usePagedSort";
 import { isOneOf, isOneOfOrNull, isString, useStoredState } from "../hooks/useStoredState";
-import { lastModifiedCutoff, lastModifiedOptions, type LastModifiedWindow } from "../utils/datetime";
+import { formatIsoDate, lastModifiedCutoff, lastModifiedOptions, type LastModifiedWindow } from "../utils/datetime";
 import { ALL_VISIBILITIES } from "../utils/feedbackVisibility";
 import { feedbackEditLink, feedbackViewLink } from "../utils/feedbackLinks";
 import { feedbackSubjectNames, feedbackSubjects, type FeedbackSubjectRef } from "../utils/feedbackSubjects";
@@ -209,7 +209,7 @@ export default function FeedbackTable({
   /** The hub page's creation link for the empty state (v3.4.0, see EmptyCtaLink). */
   emptyAction?: ReactNode;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const currentUserId = getUserId();
   const config = VIEW_CONFIG[view];
   const visibilityOptions = ALL_VISIBILITIES.map((value) => ({
@@ -479,6 +479,12 @@ export default function FeedbackTable({
                 </Table.Td>
                 <Table.Td style={{ width: 1, whiteSpace: "nowrap" }}>
                   <StatusBadge status={f.status} />
+                  {/* The requester's optional deadline (v3.8.0) — REQUESTED rows only. */}
+                  {f.status === "REQUESTED" && f.expiresOn && (
+                    <Text size="xs" c="dimmed" mt={2}>
+                      {t("feedback.expiresRow", { date: formatIsoDate(f.expiresOn, i18n.language) })}
+                    </Text>
+                  )}
                 </Table.Td>
                 <Table.Td style={{ whiteSpace: "nowrap" }}>
                   <DateCell value={f.lastModified} mode="relative" />

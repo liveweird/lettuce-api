@@ -24,6 +24,8 @@ function describeEvent(e: FeedbackEvent, t: TFunction): string {
       return t("feedback.event.contentAndVisibilityUpdated");
     case "VISIBILITY_CHANGED":
       return t("feedback.event.visibilityChanged", { to: t(dynamicKey(`common.visibility.${p.to}`)) });
+    case "REQUEST_EXPIRED":
+      return t("feedback.event.requestExpired");
     default:
       // Forward-compat: an event kind this client build doesn't know yet — show the raw type.
       return e.type;
