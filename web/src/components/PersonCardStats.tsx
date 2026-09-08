@@ -1,7 +1,7 @@
 import { Badge, Divider, Group, Text } from "@mantine/core";
 import { useTranslation } from "react-i18next";
 import { canAudit, hasFeature } from "../api/session";
-import { formatIsoDate, formatMonthRange, formatRelativeTime, formatDateTime } from "../utils/datetime";
+import { formatIsoDate, formatMonthRangeShort, formatRelativeTime, formatDateTime } from "../utils/datetime";
 import { formatDays } from "../utils/daysOffCost";
 import { pickLocalized, type LocalizedEntry } from "../utils/localized";
 import type { PersonCard as PersonCardData } from "../utils/teamRows";
@@ -313,7 +313,7 @@ export default function PersonCardBody({
               person.lastReviewPeriodEndMonth != null ? (
                 <>
                   <Text size="xs">
-                    {formatMonthRange(
+                    {formatMonthRangeShort(
                       person.lastReviewPeriodStartMonth,
                       person.lastReviewPeriodEndMonth,
                       i18n.language,
