@@ -129,7 +129,8 @@ describe("FeedbackTable (received view)", () => {
     );
     renderWithProviders(<FeedbackTable view="received" />);
 
-    expect(await screen.findByText("Expires Jun 15, 2099")).toBeInTheDocument();
+    expect(await screen.findByText("Expires")).toBeInTheDocument();
+    expect(screen.getByText("Jun 15, 2099")).toBeInTheDocument();
   });
 
   test("a REQUESTED row with no expiration shows no deadline text", async () => {
@@ -137,7 +138,7 @@ describe("FeedbackTable (received view)", () => {
     renderWithProviders(<FeedbackTable view="received" />);
 
     await screen.findByText("Requested");
-    expect(screen.queryByText(/^Expires /)).toBeNull();
+    expect(screen.queryByText("Expires")).toBeNull();
   });
 
   test("shows 'You' in the Requester column when the requester is the current user", async () => {

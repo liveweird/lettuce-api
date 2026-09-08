@@ -185,7 +185,9 @@ describe("Dictionary page", () => {
     expect(screen.getAllByText("Polish").length).toBeGreaterThan(0);
     expect(screen.getByText("(optional)")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    // Cancel is never gated on dirty (the shared discard-guard convention) — it stays
+    // clickable and, on a clean form, navigates straight away with no prompt.
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled();
   });
 
   test("adding an entry sends it id-less while existing rows keep their ids", async () => {
@@ -276,7 +278,22 @@ describe("Dictionary page", () => {
     ).toBeInTheDocument();
   });
 
-  test("a dirty Cancel asks to discard and discarding restores the loaded values", async () => {
+  test("cancel-on-clean navigates without prompting the discard guard", async () => {
+    const user = userEvent.setup();
+    stubApi();
+    renderPage();
+
+    await screen.findByDisplayValue("Engineering");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    // No discard confirm on a clean form — requestCancel navigates straight away (a same-page
+    // no-op here, since the editor has nowhere else to go) and the loaded values stay put.
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(await screen.findByDisplayValue("Engineering")).toBeInTheDocument();
+    expect(putBodies()).toHaveLength(0);
+  });
+
+  test("a dirty Cancel prompts the discard guard, and discarding restores the loaded values", async () => {
     const user = userEvent.setup();
     stubApi();
     renderPage();
@@ -288,7 +305,7 @@ describe("Dictionary page", () => {
 
     const modal = await screen.findByRole("dialog");
     expect(within(modal).getByText("Your unsaved dictionary changes will be lost.")).toBeInTheDocument();
-    await user.click(within(modal).getByRole("button", { name: "Discard" }));
+    await user.click(within(modal).getByRole("link", { name: "Discard" }));
 
     expect(await screen.findByDisplayValue("Engineering")).toBeInTheDocument();
     expect(screen.queryByDisplayValue("Changed")).not.toBeInTheDocument();

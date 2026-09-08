@@ -1,6 +1,6 @@
 import type { ParseKeys } from "i18next";
 import { useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import { Navigate, useLocation, useParams } from "react-router-dom";
 import {
   Alert,
   Badge,
@@ -16,18 +16,19 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
 import { useForm, type FormErrors } from "@mantine/form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { IconPlus, IconListDetails } from "@tabler/icons-react";
 import { isAdmin } from "../api/session";
 import CenteredLoader from "../components/CenteredLoader";
+import DiscardGuard from "../components/DiscardGuard";
+import FormFooter from "../components/FormFooter";
 import PageHeader from "../components/PageHeader";
 import { SUPPORTED_LANGUAGES, type SupportedLanguage } from "../i18n";
 import { getDictionary, updateDictionary, type DictionaryEntry, type DictionarySlug } from "../api/dictionaries";
 import { showSuccessToast } from "../utils/toast";
-import ConfirmActionModal from "../components/ConfirmActionModal";
+import { useDiscardGuard } from "../hooks/useDiscardGuard";
 import EmptyState from "../components/EmptyState";
 import { RowControls } from "../components/ParagraphListEditor";
 import {
@@ -214,13 +215,13 @@ function DictionaryEditor({
   initialItems: DictionaryEntry[];
 }) {
   const { t } = useTranslation();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   // The save PUT committed but the re-seed GET failed (v2.24.0): the editor's rows lack their
   // minted ids, so a resubmit would INSERT DUPLICATES — freeze the editor and ask for a reload.
   const [staleAfterSave, setStaleAfterSave] = useState(false);
-  const [cancelOpen, { open: openCancel, close: closeCancel }] = useDisclosure(false);
 
   // The editor always shows exactly two columns: English (required, canonical) beside ONE
   // translation language chosen by the picker below — constant width at any number of
@@ -237,6 +238,36 @@ function DictionaryEditor({
     initialValues: toFormValues(initialItems),
     validate: dictionaryFormValidation(t),
   });
+
+  // Mantine's own form.isDirty() misses list operations — inserting/removing/reordering a row
+  // never reliably flips its internal dirty flags (the EditGoal milestone-list precedent) — so
+  // this compares the SAVE PAYLOAD instead of the raw form values (toUpdateBody strips the
+  // React-list-identity `key` field, the only difference two loads would otherwise show).
+  // Reused for the Save/Cancel disabled state too, not just the discard guard below.
+  const dirty = () =>
+    JSON.stringify(toUpdateBody(form.values)) !== JSON.stringify(toUpdateBody(toFormValues(initialItems)));
+
+  // There is no separate list page to leave to — the editor and the read-only view share this
+  // one route (v3.5.0's DiscardGuard is built for "leave to another screen"), so Cancel is a
+  // same-page confirm. Its Discard button still performs a real react-router navigation (a
+  // fresh `location.key`, even though the pathname is unchanged) — caught below to actually
+  // revert the form, the guarded "adjust state while rendering" pattern (comparing against a
+  // previous render's value; see react.dev's "storing information from previous renders").
+  const { requestCancel, guardProps } = useDiscardGuard({
+    isDirty: dirty,
+    to: `/dictionaries/${slug}`,
+    title: t("dictionary.discardTitle"),
+    message: t("dictionary.discardMessage"),
+  });
+  const [lastLocationKey, setLastLocationKey] = useState(location.key);
+  if (location.key !== lastLocationKey) {
+    setLastLocationKey(location.key);
+    if (guardProps.opened) {
+      form.reset();
+      setError(null);
+      guardProps.onClose();
+    }
+  }
 
   // Languages currently holding a validation error (paths are `entries.<i>.values.<lang>`) —
   // they get a "•" marker in the picker, and a failed Save switches the visible column to the
@@ -277,12 +308,6 @@ function DictionaryEditor({
     } finally {
       setSubmitting(false);
     }
-  }
-
-  function discard() {
-    form.reset();
-    setError(null);
-    closeCancel();
   }
 
   const rows = form.values.entries;
@@ -422,30 +447,25 @@ function DictionaryEditor({
           </Alert>
         )}
 
-        <Group justify="flex-end" gap="sm">
+        <FormFooter>
+          {/* Unlike Save, Cancel is never gated on dirty (the shared discard-guard convention,
+              EditAlert/EditGoal precedent) — requestCancel itself navigates straight away on a
+              clean form and only prompts once there is something to lose. */}
           <Button
             type="button"
             variant="default"
-            onClick={openCancel}
-            disabled={submitting || staleAfterSave || !form.isDirty()}
+            onClick={requestCancel}
+            disabled={submitting || staleAfterSave}
           >
             {t("common.action.cancel")}
           </Button>
-          <Button type="submit" loading={submitting} disabled={staleAfterSave || !form.isDirty()}>
+          <Button type="submit" loading={submitting} disabled={staleAfterSave || !dirty()}>
             {t("common.action.save")}
           </Button>
-        </Group>
+        </FormFooter>
       </Stack>
 
-      <ConfirmActionModal
-        opened={cancelOpen}
-        onClose={closeCancel}
-        title={t("dictionary.discardTitle")}
-        message={t("dictionary.discardMessage")}
-        cancelLabel={t("common.action.keepEditing")}
-        confirmLabel={t("common.action.discard")}
-        onConfirm={discard}
-      />
+      <DiscardGuard {...guardProps} />
     </form>
   );
 }
