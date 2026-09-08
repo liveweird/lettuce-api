@@ -7,7 +7,11 @@ import { renderWithProviders, screen } from "../test/render";
 
 const STORAGE_KEY = "lettuce.changelog";
 
-describe("Changelog", () => {
+// Every test here renders the WHOLE changelog timeline, and "renders one timeline entry per
+// version" then loops a getByText per entry — O(entries) queries that grow with each release. It
+// runs ~1.2s locally but has hit ~6.9s on the loaded CI runner, tripping the 5s default. Bump the
+// whole suite's timeout (collector-options form) so a slow runner doesn't flake the gate.
+describe("Changelog", { timeout: 15_000 }, () => {
   afterEach(async () => {
     await i18n.changeLanguage("en");
   });
