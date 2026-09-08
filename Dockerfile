@@ -44,6 +44,13 @@ FROM eclipse-temurin:21-jre@sha256:7a65df4b22d2de92d4e04056e884f3b9122d70b21e284
 WORKDIR /app
 COPY --from=server /src/server/build/install/server/ ./
 COPY --from=web /web/dist web
+# Run as a fixed, unprivileged uid/gid (Checkup #34 Tier A pod hardening — pairs with the
+# k8s manifest's runAsNonRoot/readOnlyRootFilesystem, which needs a real numeric uid to
+# check against). No entry in /etc/passwd is required — the app never shells out or looks
+# itself up by name. WORKDIR is chown'd before the switch since --chown on COPY --from
+# would need repeating on every copy above; a single chown after is simpler here.
+RUN chown -R 1000:1000 /app
+USER 1000:1000
 ENV WEB_STATIC_DIR=/app/web
 # The shipped image runs in production mode: the JWT-secret and seed-password fail-closed
 # checks are active, and HSTS + HTTPS redirect are on. Local demos (docker-compose.yaml)

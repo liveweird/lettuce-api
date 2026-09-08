@@ -9,6 +9,12 @@ metadata:
   name: app
 spec:
   replicas: 1
+  # Single-replica in-memory state (login lockout, MFA challenges, throttles — all
+  # security.md-documented as per-instance) means two pods can never briefly overlap the
+  # way a default RollingUpdate would; Recreate always tears the old pod down first (the
+  # postgres-deployment.yaml precedent — same rationale, different state).
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       io.kompose.service: app
@@ -20,6 +26,15 @@ spec:
       labels:
         io.kompose.service: app
     spec:
+      # No in-cluster API calls are ever made from this pod — the default token would only
+      # be an unused credential sitting in the filesystem.
+      automountServiceAccountToken: false
+      # No shutdownGracePeriod/shutdownTimeout is set in application.yaml, so EngineMain's
+      # Netty-engine defaults apply (a ~2s quiet period + 5s timeout for in-flight requests
+      # to drain, per Ktor's documented server-stop behavior — see
+      # https://ktor.io/docs/server-stop.html). 30s (the Kubernetes default, stated
+      # explicitly here) leaves generous headroom above that worst case before SIGKILL.
+      terminationGracePeriodSeconds: 30
       containers:
         - env:
             # Secrets come from the `lettuce-secrets` Secret — see k8s/templates/secret.yaml for how to
@@ -131,6 +146,24 @@ spec:
               memory: "320Mi"
             limits:
               memory: "512Mi"
+          # Pod hardening (Checkup #34 Tier A): the image already runs as the non-root `lettuce`
+          # user (see Dockerfile), so runAsNonRoot only enforces what's already true; the
+          # container never needs Linux capabilities, privilege escalation, or a writable root
+          # filesystem — the app logs to stdout only (logback.xml has no file appender) and
+          # Flyway/R2DBC never write to disk. /tmp is the one path the JVM itself expects to be
+          # writable (java.io.tmpdir), backed by the emptyDir volume below.
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           # Dedicated health endpoints (plugins/Health.kt), both unauthenticated and outside /api/:
           #   /healthz — liveness: process-alive only, never touches the DB (so a DB outage does
           #              NOT restart-storm the pod).
@@ -168,3 +201,6 @@ spec:
                   value: https
             periodSeconds: 10
       restartPolicy: Always
+      volumes:
+        - name: tmp
+          emptyDir: {}
