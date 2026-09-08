@@ -129,11 +129,15 @@ fun Application.configureFeedbackRoutes() {
         authenticate {
             get<Feedbacks> {
                 val caller = call.feedbackCaller()
-                // The lazy expiry sweep (v3.8.0 — no background job, the AlertService.visible(now)
-                // precedent): flip overdue REQUESTED rows to REJECTED and persist their event +
-                // notifications exactly like the manual `POST …/reject` path, so the list built
-                // below already reflects them (the write-during-a-GET TokenBlocklistService
-                // precedent).
+                // The lazy expiry sweep (v3.8.0 — no background job): flip overdue REQUESTED rows
+                // to REJECTED and persist their event + notifications exactly like the manual
+                // `POST …/reject` path, so the list built below already reflects them. This is a
+                // deliberate exception, not an established pattern: it is the first WRITE this
+                // codebase performs on a read-only GET path (AlertService.visible is a read-side
+                // filter with no write of its own, and TokenBlocklistService's prune runs on the
+                // logout WRITE path, not a GET — neither is a precedent for this). Chosen because
+                // a background job was out of scope and the list route is hit constantly, keeping
+                // expiry prompt in practice.
                 feedbackService.expireOverdueRequests(LocalDate.now()).forEach { outcome ->
                     outcome.notifications.forEach { notificationService.create(it) }
                     feedbackEventService.create(
