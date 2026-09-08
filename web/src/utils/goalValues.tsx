@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-refresh/only-export-components -- deliberately mixed file (the auth.tsx precedent): goal value/overdue helper functions share a home with their small presentational components */
 // A deliberately mixed file (the auth.tsx precedent): the goal value/overdue helpers and their
 // small presentational components share one home, at the cost of Fast Refresh for it.
 import { Group, Progress, Stack, Text } from "@mantine/core";

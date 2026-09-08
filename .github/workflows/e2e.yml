@@ -3,9 +3,16 @@ name: e2e
 # Blackbox Playwright suite: brings the full stack up via docker compose and drives a real browser.
 on:
   # Manual-only: this browser suite no longer runs on push/PR. The quality workflow gates
-  # backend/web checks plus the Docker-free e2e typecheck and scenario-parity check.
+  # backend/web checks plus the Docker-free e2e typecheck and scenario-parity check. The
+  # LOCAL e2e run (see .claude/docs/testing.md's pre-merge gate sequence) is the actual gate
+  # for this suite before a merge; this workflow exists for on-demand CI confirmation.
   # Run it on demand from the Actions tab → "e2e" → "Run workflow".
   workflow_dispatch:
+
+# Least-privilege default (Checkup #34 Tier A guardrail): this workflow only checks out the
+# repo and uploads its own report artifact, so it needs no token scopes beyond read access.
+permissions:
+  contents: read
 
 jobs:
   e2e:

@@ -59,9 +59,9 @@ export function usePagedSort<F extends string>(
   const [sortDir, setSortDir] = useState<SortDir>(stored.sortDir ?? initialSortDir);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets to page 1 whenever a filter or sort changes, so the user is never stranded on a now-invalid page
     setPage(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- filterDeps is a caller-supplied array whose length/identity varies per page; the hook's whole contract is "reset on any of these changing"
   }, [...filterDeps, sortField, sortDir]);
 
   const persistKey = persist?.key;

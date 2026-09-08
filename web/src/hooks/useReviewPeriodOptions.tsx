@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-refresh/only-export-components -- pairs the useReviewPeriodOptions hook and its ReviewPeriodOption type with the renderPeriodOption Select renderOption helper, which returns JSX but isn't a mountable component */
 import { useMemo } from "react";
 import { Badge, Group } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";

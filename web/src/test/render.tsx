@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-refresh/only-export-components -- test-only helper module (never HMR'd): exports renderWithProviders/renderAppAt plus a testing-library re-export barrel, not a component */
 import { type ReactElement } from "react";
 import { render, type RenderOptions } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";

@@ -114,7 +114,7 @@ export function TourProvider({
   // once on mount too. Mount-only by design: `run` and `onStart` are the mount-time values.
   useEffect(() => {
     if (run) onStart?.();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only by design: reads run/onStart's mount-time values, must not re-fire on later changes
   }, []);
 
   function handleFinished() {

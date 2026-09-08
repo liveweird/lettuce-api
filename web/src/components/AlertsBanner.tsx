@@ -61,7 +61,7 @@ export default function AlertsBanner() {
     const stored = readState();
     if (maxId > stored.seenMaxId) {
       writeState({ hidden: false, seenMaxId: maxId });
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs local hidden state to a new unseen alert id discovered from localStorage, not derivable during render
       setHidden(false);
     }
   }, [maxId]);

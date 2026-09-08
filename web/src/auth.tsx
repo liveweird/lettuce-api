@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-refresh/only-export-components -- deliberately mixes the RequireAuth/RedirectIfAuthed route-guard components with the flagSignedOut/consumeSignedOut session helpers; other files cite this as "the auth.tsx precedent" */
 import { useSyncExternalStore, type ReactElement } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import {

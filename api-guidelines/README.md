@@ -26,15 +26,18 @@ runs both.
 
 ### 1. Mechanical — run the linter
 
-Checks the structural rules tagged `[spectral]` / `[both]`:
+Checks the structural rules tagged `[spectral]` / `[both]`. **CI (`.github/workflows/quality.yml`,
+the API contract job) pins Spectral CLI at `@6.15.0` and runs with `--fail-severity error`** — match
+both when running locally (via the `/api-review` skill or by hand) so a local pass means the same
+thing CI's does:
 
 ```sh
-npx @stoplight/spectral-cli lint server/src/main/resources/openapi/documentation.yaml \
-  --ruleset api-guidelines/api-guidelines.spectral.yaml
+npx @stoplight/spectral-cli@6.15.0 lint server/src/main/resources/openapi/documentation.yaml \
+  --ruleset api-guidelines/api-guidelines.spectral.yaml --fail-severity error
 
 # Sanity-check the ruleset itself against the conformant fixture (fully clean, incl. hints):
-npx @stoplight/spectral-cli lint api-guidelines/examples/conformant.yaml \
-  --ruleset api-guidelines/api-guidelines.spectral.yaml
+npx @stoplight/spectral-cli@6.15.0 lint api-guidelines/examples/conformant.yaml \
+  --ruleset api-guidelines/api-guidelines.spectral.yaml --fail-severity error
 ```
 
 Violations cite the guideline ID (e.g. *"...(API-ERR-001)"*). Severity model:

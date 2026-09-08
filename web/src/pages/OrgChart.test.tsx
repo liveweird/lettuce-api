@@ -9,7 +9,7 @@ import { jsonResponse } from "../test/http";
 // the page's REAL custom node components (via nodeTypes), so PersonNode/TeamNode logic
 // (aria labels, self/deleted gating, navigation) is exercised. The mockMarkdownEditor idiom.
 vi.mock("@xyflow/react", () => ({
-  /* eslint-disable @typescript-eslint/no-explicit-any */
+  /* eslint-disable @typescript-eslint/no-explicit-any -- typing the mocked ReactFlow props against the real library's generic node/edge types isn't worth it in a test-only stub */
   ReactFlow: ({ nodes, edges, nodeTypes }: any) => (
     <div data-testid="canvas" data-edge-count={edges.length}>
       {nodes.map((n: any) => {

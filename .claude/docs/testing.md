@@ -29,7 +29,28 @@ for required-check rules are `backend` (**Backend**), `web` (**Web**), `api-cont
 repository ruleset requires all four checks from the GitHub Actions app on `master`,
 with strict up-to-date checking. Existing PR, deletion, and non-fast-forward protections
 remain in place, with no bypass actors. These settings live in GitHub, separately from
-the workflow file; preserve the check names when editing the workflow.
+the workflow file; preserve the check names when editing the workflow. **The browser e2e suite is
+dispatch-only in CI** (`workflow_dispatch`, no `push`/`pull_request` trigger) — **the LOCAL e2e run
+below is the actual gate** for that suite before a merge; the CI workflow exists only for on-demand
+confirmation, and it now carries a top-level `permissions: contents: read` (least-privilege — it
+only checks out the repo and uploads its own report artifact).
+
+**Local pre-merge gate sequence.** Run these in this order, non-overlapping (never the server
+suite and e2e at once — they contend on shared rate-limit buckets and produce timeout flakes that
+read as real failures) — and never `docker compose down -v` against a long-lived dev/e2e volume:
+
+1. `cd web && npm run gen:api` — regenerates `web/src/api/schema.ts` from the OpenAPI spec, then
+   `git diff --exit-code -- web/src/api/schema.ts` (the local twin of the **API contract** CI job's
+   clean-diff assertion — a spec change, even a description-only edit, can still change the
+   generated types; the CI job fails the same way if the committed file drifts).
+2. `./gradlew --dependency-verification strict check :server:installDist` (`--rerun` on
+   `:server:test` if you need a clean, non-cached run), then
+   `git diff --exit-code -- gradle.lockfile core/gradle.lockfile server/gradle.lockfile settings-gradle.lockfile gradle/verification-metadata.xml`
+   (the local twin of the **Backend** CI job's lock/checksum clean-diff check — see
+   `.claude/docs/dependency-reproducibility.md` for an intentional dependency update instead of
+   fighting this check).
+3. The full e2e suite (see "E2E scenarios" below and `e2e/README.md` for run recipes) — only after
+   1 and 2 are clean.
 
 `server/src/test/kotlin/ServerTest.kt` uses `io.ktor.server.testing.testApplication` and overrides the `postgres.*` config keys via `MapApplicationConfig` to point at a Testcontainers `PostgreSQLContainer` started lazily by `PostgresTestSupport`. Running tests requires a working Docker daemon (Docker Desktop, OrbStack, etc.). When adding tests, replicate the `environment { config = ApplicationConfig("application.yaml").mergeWith(MapApplicationConfig(...)) }` block so the app boots against the test container rather than a real database. The container runs **all** Flyway migrations, so the V6/V9/V14 seeds (admin, demo org, default templates) are present — tests scope their assertions with unique prefixes/filters rather than asserting absolute counts.
 
