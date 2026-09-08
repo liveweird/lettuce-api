@@ -160,7 +160,8 @@
     "contentUpdated": "Content updated.",
     "contentAndVisibilityUpdated": "Content and visibility updated.",
     "visibilityChanged": "Visibility changed to {{to}}.",
-    "requestExpired": "The feedback request expired."
+    "requestExpired": "The feedback request expired.",
+    "systemActor": "Automatic"
   },
   "feedbacksAudit": "All feedbacks of {{who}}",
   "feedbacksAuditHint": "Every feedback {{who}} is a party to — as subject, provider, or requester — at every status. Read-only.",

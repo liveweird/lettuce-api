@@ -48,6 +48,9 @@ export default function FeedbackHistory({ feedbackId }: { feedbackId: number }) 
       error={error}
       emptyMessage={t("feedback.noHistory")}
       renderTitle={(e) => describeEvent(e, t)}
+      // The auto-expiry flip is stored against the provider (feedback_events.user_id is
+      // NOT NULL), but it wasn't performed by them — show the system label instead of their name.
+      renderActor={(e) => (e.type === "REQUEST_EXPIRED" ? t("feedback.event.systemActor") : e.userName)}
     />
   );
 }

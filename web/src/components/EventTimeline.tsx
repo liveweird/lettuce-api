@@ -22,6 +22,7 @@ export default function EventTimeline<E extends TimelineEvent>({
   emptyMessage,
   renderTitle,
   renderBody,
+  renderActor,
 }: {
   events: E[] | undefined;
   isLoading: boolean;
@@ -31,6 +32,10 @@ export default function EventTimeline<E extends TimelineEvent>({
   renderTitle: (e: E) => string;
   // Optional per-event content under the title (the goal progress comment) — most areas omit it.
   renderBody?: (e: E) => ReactNode;
+  // Optional override for the `who` half of the meta line (default: e.userName) — an automated
+  // event (the feedback expiry sweep) is stored against a user id for schema reasons but wasn't
+  // performed by them, so the caller can substitute a localized system label instead.
+  renderActor?: (e: E) => string;
 }) {
   const { t, i18n } = useTranslation();
 
@@ -58,7 +63,7 @@ export default function EventTimeline<E extends TimelineEvent>({
         <Timeline.Item key={e.id} title={renderTitle(e)}>
           {renderBody?.(e)}
           <Text size="xs" c="dimmed">
-            {e.userName} · {formatDateTime(e.timestamp, i18n.language)}
+            {renderActor?.(e) ?? e.userName} · {formatDateTime(e.timestamp, i18n.language)}
           </Text>
         </Timeline.Item>
       ))}

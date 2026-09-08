@@ -7601,7 +7601,12 @@ components:
         userId: { type: integer, format: int32, minimum: 0 }
         userName:
           type: string
-          description: Display name of the user who performed the change. Server-resolved, read-only.
+          description: >-
+            Display name of the user recorded against this event. Server-resolved, read-only.
+            For most event types this is the user who performed the change; the exception is
+            REQUEST_EXPIRED (v3.8.0), whose flip is automated — it is recorded against the
+            provider only because this column is NOT NULL, and the client should not present
+            that name as the actor.
         timestamp:
           type: integer
           format: int64
