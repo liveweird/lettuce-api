@@ -17,6 +17,12 @@ interface ChangelogEntry {
 
 export const CHANGELOG: readonly ChangelogEntry[] = [
   {
+    version: "3.8.3",
+    date: "2026-09-09",
+    en: `A feedback request that expires on its own now shows "Automatic" in the history instead of a person's name, and expiring a request can no longer collide with someone picking it up at the same moment. Plus reliability and deployment hardening under the hood.`,
+    pl: `Prośba o feedback, która wygasa samoczynnie, pokazuje teraz w historii „Automatycznie" zamiast imienia i nazwiska osoby, a wygaśnięcie prośby nie może już zderzyć się z jej przyjęciem w tym samym momencie. Do tego usprawnienia niezawodności i wzmocnienie wdrożenia pod maską.`,
+  },
+  {
     version: "3.8.2",
     date: "2026-09-08",
     en: `On a person's card, the last review's period now uses short month names ("Aug 2026 – Jan 2027") so it fits on one line next to its status instead of wrapping.`,
