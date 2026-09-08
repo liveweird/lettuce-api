@@ -17,6 +17,12 @@ interface ChangelogEntry {
 
 export const CHANGELOG: readonly ChangelogEntry[] = [
   {
+    version: "3.7.0",
+    date: "2026-09-08",
+    en: `Every "pick a person" list — feedback recipients, a report for a 1:1/goal/review/days-off request, a succession candidate, a team's manager — now shows each person's team(s) as a small line under their name, and typing a team name filters the list to that team's members. The picked name itself still shows and saves exactly as before, with no team text attached.`,
+    pl: `Każda lista wyboru osoby — odbiorcy feedbacku, pracownik do 1:1/celu/oceny/urlopu, kandydat do sukcesji, kierownik zespołu — pokazuje teraz zespół(y) danej osoby małą linią pod imieniem i nazwiskiem, a wpisanie nazwy zespołu filtruje listę do jego członków. Wybrane imię i nazwisko nadal wyświetla się i zapisuje dokładnie jak wcześniej, bez dopisanej nazwy zespołu.`,
+  },
+  {
     version: "3.6.2",
     date: "2026-09-05",
     en: `Deployment behind a real hostname. The Kubernetes manifests now include the ingress and TLS wiring for serving Lettuce at its own domain, the client address a proxy reports is trusted in a way that can't be faked, and the sign-in and notification links in emails are no longer silently dropped when the deployment's address isn't configured — the server now warns about it at startup. Nothing changes on screen.`,

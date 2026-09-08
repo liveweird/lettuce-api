@@ -84,12 +84,13 @@ describe("CreateOneOnOne page", () => {
     });
     renderCreate();
 
-    // The picker offers one option per person (deduped across teams).
+    // The picker offers one option per person (deduped across teams); each option's team(s)
+    // ride a dimmed subtitle, so matches use a pattern rather than the exact name.
     const picker = await screen.findByRole("combobox", { name: "Team member" });
     await userEvent.click(picker);
-    expect(await screen.findAllByRole("option", { name: "Sam Subordinate" })).toHaveLength(1);
-    expect(screen.getByRole("option", { name: "Zoe Zebra" })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("option", { name: "Sam Subordinate" }));
+    expect(await screen.findAllByRole("option", { name: /Sam Subordinate/ })).toHaveLength(1);
+    expect(screen.getByRole("option", { name: /Zoe Zebra/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("option", { name: /Sam Subordinate/ }));
 
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
 
@@ -207,7 +208,7 @@ describe("CreateOneOnOne page", () => {
 
     const picker = await screen.findByRole("combobox", { name: "Team member" });
     await userEvent.click(picker);
-    await userEvent.click(await screen.findByRole("option", { name: "Zoe Zebra" }));
+    await userEvent.click(await screen.findByRole("option", { name: /Zoe Zebra/ }));
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
 
     expect(
@@ -228,7 +229,7 @@ describe("CreateOneOnOne page", () => {
 
     const picker = await screen.findByRole("combobox", { name: "Team member" });
     await userEvent.click(picker);
-    await userEvent.click(await screen.findByRole("option", { name: "Zoe Zebra" }));
+    await userEvent.click(await screen.findByRole("option", { name: /Zoe Zebra/ }));
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
 
     // The create-specific 403 wording (v2.35.0) — not the edit flow's "change this meeting".

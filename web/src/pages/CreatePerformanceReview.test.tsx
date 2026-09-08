@@ -184,7 +184,7 @@ describe("CreatePerformanceReview page", () => {
     expect(await screen.findByText("New review")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create" })).toBeDisabled();
     fireEvent.click(screen.getByLabelText("Team member", { selector: "input" }));
-    fireEvent.click(await screen.findByRole("option", { name: "Sub Ordinate" }));
+    fireEvent.click(await screen.findByRole("option", { name: /Sub Ordinate/ }));
     expect(screen.getByRole("button", { name: "Create" })).toBeEnabled();
   });
 });

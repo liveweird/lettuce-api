@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listAllTeamMembers } from "../api/teams";
+import { userOption, type UserOption } from "../components/userOptions";
 import { groupTeamRows } from "../utils/teamRows";
 
 /**
@@ -16,7 +17,7 @@ import { groupTeamRows } from "../utils/teamRows";
  * `reportsError` as the Select's `error` (the no-silent-blanks rule).
  */
 export function useManagedReports(enabled: boolean): {
-  reports: { userId: number; name: string }[];
+  reports: { userId: number; name: string; teamNames: string[] }[];
   reportsError: boolean;
   /** True once the pool actually loaded — the create screens resolve a preselected id
    *  against it and fall back to the picker only after this settles (v2.35.0). */
@@ -31,14 +32,16 @@ export function useManagedReports(enabled: boolean): {
   const reports = useMemo(
     () =>
       groupTeamRows(data ?? [])
-        .map((p) => ({ userId: p.userId, name: p.name }))
+        .map((p) => ({ userId: p.userId, name: p.name, teamNames: p.teamNames }))
         .sort((a, b) => a.name.localeCompare(b.name)),
     [data],
   );
   return { reports, reportsError: isError, reportsReady: isSuccess };
 }
 
-/** The pool as Mantine Select options — the shape all four picker screens render. */
-export function toReportOptions(reports: { userId: number; name: string }[]) {
-  return reports.map((p) => ({ value: String(p.userId), label: p.name }));
+/** The pool as team-aware Mantine Select options — the shape all report-picker screens render. */
+export function toReportOptions(
+  reports: { userId: number; name: string; teamNames: string[] }[],
+): UserOption[] {
+  return reports.map((p) => userOption(p.userId, p.name, p.teamNames));
 }

@@ -5,6 +5,7 @@ import { isAdmin } from "../api/session";
 import { useManagerOptions } from "../hooks/useManagerOptions";
 import { charCountDescription } from "../utils/charCount";
 import { MAX_TEAM_NAME_LENGTH, type TeamFormValues } from "../utils/teamForm";
+import { renderUserOption } from "./userOptions";
 
 /**
  * The field block shared by the create and edit team pages (which own submit/error handling).
@@ -38,6 +39,7 @@ export default function TeamFormFields({ form }: { form: UseFormReturnType<TeamF
         label={t("common.field.manager")}
         placeholder={managersLoading ? t("common.state.loading") : t("teams.pickManager")}
         data={managerOptions}
+        renderOption={renderUserOption}
         searchable
         clearable={false}
         disabled={managersLoading}

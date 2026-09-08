@@ -41,6 +41,7 @@ import MetaStrip from "../components/MetaStrip";
 import OrderedTextListEditor from "../components/OrderedTextListEditor";
 import PageHeader from "../components/PageHeader";
 import PersonaChip from "../components/PersonaChip";
+import { renderUserOption, userOption, type UserOption } from "../components/userOptions";
 import { useAllUsers } from "../hooks/useAllUsers";
 import { useDiscardGuard } from "../hooks/useDiscardGuard";
 import { useManagedReports } from "../hooks/useManagedReports";
@@ -92,7 +93,7 @@ function buildCandidateOptions(
   plan: SuccessionPlanResponse | undefined,
   userPool: ReturnType<typeof useAllUsers>["userPool"],
   nominationId: number | null,
-): SelectOption[] {
+): UserOption[] {
   if (plan == null) return [];
   const taken = new Set(
     plan.nominations
@@ -105,7 +106,7 @@ function buildCandidateOptions(
   const keepId = plan.nominations.find((n) => n.id === nominationId)?.candidateId;
   return (userPool ?? [])
     .filter((u) => u.id !== plan.userId && (!u.deactivated || u.id === keepId) && !taken.has(u.id))
-    .map((u) => ({ value: String(u.id), label: u.name }));
+    .map((u) => userOption(u.id, u.name, (u.teams ?? []).map((team) => team.name)));
 }
 
 // The linkable pool plus any already-linked goals outside it (e.g. another chain manager's) —
@@ -239,7 +240,7 @@ function NominationForm({
 }: {
   form: UseFormReturnType<SuccessionNominationFormValues>;
   seatName: string;
-  candidateOptions: SelectOption[];
+  candidateOptions: UserOption[];
   goalOptions: SelectOption[];
   usersError: boolean;
   goalsError: boolean;
@@ -267,6 +268,7 @@ function NominationForm({
               label={t("succession.candidate")}
               placeholder={t("succession.pickCandidate")}
               data={candidateOptions}
+              renderOption={renderUserOption}
               searchable
               clearable
               nothingFoundMessage={t("succession.noCandidates")}

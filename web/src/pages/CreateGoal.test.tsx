@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import CreateGoal from "./CreateGoal";
 import { jsonResponse } from "../test/http";
+import { renderWithProviders } from "../test/render";
 
 vi.mock("../components/MarkdownEditor", async () =>
   (await import("../test/mockMarkdownEditor")).mockMarkdownEditorModule(),
@@ -114,7 +115,9 @@ describe("CreateGoal page", () => {
     expect(screen.getByRole("button", { name: /^create$/i })).toBeDisabled();
 
     fireEvent.click(screen.getByLabelText("Team member", { selector: "input" }));
-    const options = await screen.findAllByRole("option", { name: "Sam Subordinate" });
+    // The team names ride a dimmed subtitle, not the option's plain-name label — matched via
+    // a pattern since the option's full accessible name now includes that subtitle too.
+    const options = await screen.findAllByRole("option", { name: /Sam Subordinate/ });
     expect(options).toHaveLength(1); // two team rows, one person
     fireEvent.click(options[0]);
 
@@ -146,6 +149,31 @@ describe("CreateGoal page", () => {
     expect(
       mockFetch.mock.calls.some(([u]) => String(u).includes("/activate")),
     ).toBe(false);
+  });
+
+  test("the report picker shows team subtitles and searching a team name filters it", async () => {
+    const user = userEvent.setup();
+    // The theme (not just env="test") must be wired for the folded-keywords filter to be
+    // active (web/CLAUDE.md) — the shared renderWithProviders helper does that.
+    renderWithProviders(<CreateGoal />, { route: "/goals/new" });
+
+    await fillDefinition(user);
+    await user.click(screen.getByLabelText("Team member", { selector: "input" }));
+
+    // Sam's two teams ride one dimmed subtitle; Bob's single team its own.
+    expect(await screen.findByText("alpha · beta")).toBeInTheDocument();
+    expect(screen.getByText("alpha")).toBeInTheDocument();
+
+    // Typing a team name filters the picker via the (hidden) team keywords, not just the label.
+    await user.type(screen.getByLabelText("Team member", { selector: "input" }), "beta");
+    expect(await screen.findByRole("option", { name: /Sam Subordinate/ })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /Bob Brown/ })).not.toBeInTheDocument();
+
+    // The closed-state value stays the plain name — no team text leaks into it.
+    await user.click(screen.getByRole("option", { name: /Sam Subordinate/ }));
+    expect(screen.getByLabelText("Team member", { selector: "input" })).toHaveValue(
+      "Sam Subordinate",
+    );
   });
 
   test("a prefilled subordinate skips the picker; Yes activates and returns to back", async () => {

@@ -26,6 +26,7 @@ import FormFooter from "../components/FormFooter";
 import MetaStrip from "../components/MetaStrip";
 import PageHeader from "../components/PageHeader";
 import PersonaChip from "../components/PersonaChip";
+import { renderUserOption, userOption } from "../components/userOptions";
 import { useDiscardGuard } from "../hooks/useDiscardGuard";
 import { REQUESTER_VISIBILITIES } from "../utils/feedbackVisibility";
 import { saveErrorMessage } from "../utils/saveError";
@@ -115,7 +116,7 @@ export default function RequestFeedback() {
     const chosen = new Set(selected.map((p) => p.id));
     return (userPool ?? [])
       .filter((u) => u.id !== requesterId && u.id !== subjectId && !chosen.has(u.id))
-      .map((u) => ({ value: String(u.id), label: u.name }))
+      .map((u) => userOption(u.id, u.name, (u.teams ?? []).map((team) => team.name)))
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [userPool, selected, requesterId, subjectId]);
 
@@ -238,6 +239,7 @@ export default function RequestFeedback() {
                 label={t("feedback.addProvider")}
                 placeholder={t("feedback.pickUser")}
                 data={addOptions}
+                renderOption={renderUserOption}
                 value={pick}
                 onChange={setPick}
                 searchable
