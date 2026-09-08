@@ -55,6 +55,19 @@
   "requesterMessagePlaceholder": "Opcjonalnie wyjaśnij, dlaczego prosisz i czego oczekujesz…",
   "requesterMessageView": "Wiadomość od proszącego",
   "addProvider": "Dodaj wystawiającego",
+  "expiration": {
+    "label": "Termin ważności",
+    "dateLabel": "Data wygaśnięcia",
+    "option": {
+      "none": "Bez terminu",
+      "1w": "Za tydzień",
+      "2w": "Za 2 tygodnie",
+      "30d": "Za 30 dni",
+      "custom": "Wybierz datę…"
+    }
+  },
+  "expiresOnLabel": "Termin ważności",
+  "expiresRow": "Wygasa {{date}}",
   "recipientsLabel": "Odbiorcy",
   "recipientsHint": "Maksymalnie {{max}} osoby",
   "recipientsMaxReached": "Osiągnięto maksimum {{max}} osób — usuń kogoś, aby wybrać kolejną osobę",
@@ -146,7 +159,8 @@
     "statusChanged": "Zmieniono status z {{from}} na {{to}}.",
     "contentUpdated": "Zaktualizowano treść.",
     "contentAndVisibilityUpdated": "Zaktualizowano treść i widoczność.",
-    "visibilityChanged": "Zmieniono widoczność na {{to}}."
+    "visibilityChanged": "Zmieniono widoczność na {{to}}.",
+    "requestExpired": "Prośba o feedback wygasła."
   },
   "feedbacksAudit": "Wszystkie feedbacki: {{who}}",
   "feedbacksAuditHint": "Każdy feedback, którego stroną jest {{who}} — jako podmiot, wystawiający/a lub proszący/a — w każdym statusie. Tylko do odczytu.",

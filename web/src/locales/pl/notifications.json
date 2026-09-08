@@ -34,6 +34,8 @@
     "withdrawnToRequester_self": "{{provider}} wycofał/a swoją autorefleksję (o którą prosiłeś/aś).",
     "deletedToRequester": "{{provider}} usunął/usunęła swój feedback na temat {{subject}} (o który prosiłeś/aś).",
     "deletedToRequester_self": "{{provider}} usunął/usunęła swoją autorefleksję (o którą prosiłeś/aś).",
+    "requestExpiredToRequester": "Twoja prośba o feedback do {{provider}} na temat {{subject}} wygasła.",
+    "requestExpiredToProvider": "Prośba o feedback od {{requester}} na temat {{subject}} wygasła.",
     "oneOnOneCreated": "{{manager}} udokumentował/a spotkanie 1:1 z Tobą ({{date}}).",
     "oneOnOneCreatedToManager": "Udokumentowałeś/aś spotkanie 1:1 z {{subordinate}} ({{date}}).",
     "goalActivated": "{{manager}} aktywował/a dla Ciebie cel „{{title}}”.",

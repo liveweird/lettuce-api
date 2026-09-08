@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AskFeedback from "./AskFeedback";
 import { jsonResponse } from "../test/http";
+import { addIsoDays, todayIsoDate } from "../utils/datetime";
 
 // The page resolves the provider's display name from the org pool (v2.35.0) — the URL's
 // providerName is ignored. Mocked at the hook level: this screen has no picker, so the pool's
@@ -150,6 +151,26 @@ describe("AskFeedback page", () => {
     });
 
     await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent("/?tab=managers"));
+  });
+
+  test("a chosen expiration preset resolves to a computed expiresOn in the payload", async () => {
+    mockFetch.mockImplementation((url: string) =>
+      Promise.resolve(url === "/api/v1/feedbacks" ? jsonResponse(201, { id: 99 }) : jsonResponse(404, {})),
+    );
+    const user = userEvent.setup();
+    renderAskFeedback();
+
+    await user.click(screen.getByRole("combobox", { name: "Expiration" }));
+    await user.click(await screen.findByRole("option", { name: "In 2 weeks", hidden: true }));
+    await user.click(screen.getByRole("button", { name: /send request/i }));
+
+    const postCall = mockFetch.mock.calls.find(
+      ([url, init]) => url === "/api/v1/feedbacks" && (init as RequestInit | undefined)?.method === "POST",
+    );
+    expect(postCall).toBeDefined();
+    expect(JSON.parse((postCall![1] as RequestInit).body as string).expiresOn).toBe(
+      addIsoDays(todayIsoDate(), 14),
+    );
   });
 
   test("includes the trimmed requester message in the payload when filled", async () => {

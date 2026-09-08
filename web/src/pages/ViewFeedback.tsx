@@ -175,6 +175,17 @@ export default function ViewFeedback() {
               },
             ]
           : []),
+        // The requester's optional deadline (v3.8.0) — meaningful only while REQUESTED; once the
+        // provider picks up/declines the row it's inert (the requesterMessage precedent).
+        ...(data.status === "REQUESTED" && data.expiresOn
+          ? [
+              {
+                key: "expiresOn",
+                label: t("feedback.expiresOnLabel"),
+                value: <DateCell value={data.expiresOn} mode="date" />,
+              },
+            ]
+          : []),
         {
           key: "lastModified",
           label: t("common.field.lastModified"),

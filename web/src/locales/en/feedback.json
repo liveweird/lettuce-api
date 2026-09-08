@@ -55,6 +55,19 @@
   "requesterMessagePlaceholder": "Optionally explain why you're asking and what you'd like feedback on…",
   "requesterMessageView": "Message from the requester",
   "addProvider": "Add a provider",
+  "expiration": {
+    "label": "Expiration",
+    "dateLabel": "Expiration date",
+    "option": {
+      "none": "No expiration",
+      "1w": "In 1 week",
+      "2w": "In 2 weeks",
+      "30d": "In 30 days",
+      "custom": "Pick a date…"
+    }
+  },
+  "expiresOnLabel": "Expires on",
+  "expiresRow": "Expires {{date}}",
   "recipientsLabel": "Recipients",
   "recipientsHint": "Up to {{max}} people",
   "recipientsMaxReached": "Maximum of {{max}} people reached — remove one to pick another",
@@ -146,7 +159,8 @@
     "statusChanged": "Status changed from {{from}} to {{to}}.",
     "contentUpdated": "Content updated.",
     "contentAndVisibilityUpdated": "Content and visibility updated.",
-    "visibilityChanged": "Visibility changed to {{to}}."
+    "visibilityChanged": "Visibility changed to {{to}}.",
+    "requestExpired": "The feedback request expired."
   },
   "feedbacksAudit": "All feedbacks of {{who}}",
   "feedbacksAuditHint": "Every feedback {{who}} is a party to — as subject, provider, or requester — at every status. Read-only.",

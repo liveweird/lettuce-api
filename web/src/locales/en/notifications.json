@@ -32,6 +32,8 @@
     "withdrawnToRequester_self": "{{provider}} withdrew their self-reflection (which you requested).",
     "deletedToRequester": "{{provider}} deleted their feedback about {{subject}} (which you requested).",
     "deletedToRequester_self": "{{provider}} deleted their self-reflection (which you requested).",
+    "requestExpiredToRequester": "Your feedback request to {{provider}} about {{subject}} expired.",
+    "requestExpiredToProvider": "The feedback request from {{requester}} about {{subject}} expired.",
     "oneOnOneCreated": "{{manager}} documented a 1:1 meeting with you ({{date}}).",
     "oneOnOneCreatedToManager": "You documented a 1:1 meeting with {{subordinate}} ({{date}}).",
     "goalActivated": "{{manager}} activated the goal \"{{title}}\" for you.",

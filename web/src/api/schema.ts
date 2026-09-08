@@ -850,12 +850,17 @@ export interface paths {
          *
          *     Malformed query parameters (unknown view, unknown sort field, unknown enum value,
          *     out-of-range page/pageSize) respond with `400` and a `ProblemDetail` body.
+         *
+         *     Side effect (v3.8.0): before building the page, every `REQUESTED` row whose `expiresOn`
+         *     deadline has passed is lazily auto-rejected (`REQUESTED → REJECTED`, a `REQUEST_EXPIRED`
+         *     history event, and a notification to both parties) — no background job, so this is the
+         *     earliest a stale request is guaranteed to flip.
          */
         get: operations["listFeedbacks"];
         put?: never;
         /**
          * Create a feedback record
-         * @description Any authenticated user may create a feedback record they are a party to. A feedback may address up to FOUR people (`subjectId` + `additionalSubjectIds`, v3.1.0 — distinct, fixed at creation; a requested feedback addresses exactly one). The provider must NOT be among the recipients (`400`) — feedback about yourself (the retired self-reflection feature, v2.36.0) is no longer creatable; pre-existing provider == subject rows remain readable, editable, and transitionable. Creation is rejected with `409` while a feedback by the same provider for the same requester — a null requester matches only null — whose recipients include ANY of the new recipients is still in progress (active `DRAFT` or `REQUESTED`); the `ProblemDetail.instance` carries `/api/v1/feedbacks/{id}` of the existing record. Clients should pre-check via `GET /api/v1/feedbacks/duplicate-check` (once per recipient). Creation involving a **deactivated** party (provider, requester, or any recipient) is rejected with `400`.
+         * @description Any authenticated user may create a feedback record they are a party to. A feedback may address up to FOUR people (`subjectId` + `additionalSubjectIds`, v3.1.0 — distinct, fixed at creation; a requested feedback addresses exactly one). The provider must NOT be among the recipients (`400`) — feedback about yourself (the retired self-reflection feature, v2.36.0) is no longer creatable; pre-existing provider == subject rows remain readable, editable, and transitionable. Creation is rejected with `409` while a feedback by the same provider for the same requester — a null requester matches only null — whose recipients include ANY of the new recipients is still in progress (active `DRAFT` or `REQUESTED`); the `ProblemDetail.instance` carries `/api/v1/feedbacks/{id}` of the existing record. Clients should pre-check via `GET /api/v1/feedbacks/duplicate-check` (once per recipient). Creation involving a **deactivated** party (provider, requester, or any recipient) is rejected with `400`. An optional `expiresOn` deadline (v3.8.0) is accepted only while `status == REQUESTED`, must be a strict ISO date, and must not be in the past — otherwise `400`; once passed, `GET /api/v1/feedbacks` lazily auto-rejects the request.
          */
         post: operations["createFeedback"];
         delete?: never;
@@ -4568,6 +4573,15 @@ export interface components {
              *     with `400` (unknown keys are not accepted).
              */
             requesterMessage?: string | null;
+            /**
+             * Format: date
+             * @description Optional deadline on a `REQUESTED` request (v3.8.0). Meaningful only while
+             *     `status == REQUESTED` — otherwise `400`; must be a strict ISO date and not in the
+             *     past (`400`). Create-only: set once and never editable afterward, like
+             *     `requesterMessage`. Null (the default) = indefinite (today's behaviour). Once
+             *     passed, the request auto-rejects (see `GET /api/v1/feedbacks`).
+             */
+            expiresOn?: string | null;
         };
         /** @description One recipient of a feedback (position-ordered lists, v3.1.0). */
         FeedbackSubject: {
@@ -4601,6 +4615,13 @@ export interface components {
              *     Null when the requester left it empty.
              */
             requesterMessage?: string | null;
+            /**
+             * Format: date
+             * @description Optional deadline on a `REQUESTED` request (v3.8.0), set at creation and never
+             *     editable. Null = indefinite, or the request already left `REQUESTED` (inert past
+             *     that point — see `GET /api/v1/feedbacks`, which auto-rejects an overdue row).
+             */
+            expiresOn?: string | null;
             /**
              * Format: int64
              * @description Epoch milliseconds of the last change. Server-managed and read-only.
@@ -4643,6 +4664,11 @@ export interface components {
             visibility: "PROVIDER_SUBJECT" | "PROVIDER_REQUESTER" | "PROVIDER_REQUESTER_SUBJECT" | "PUBLIC";
             /** @enum {string} */
             status: "REQUESTED" | "DRAFT" | "SENT" | "WITHDRAWN" | "REJECTED";
+            /**
+             * Format: date
+             * @description Optional deadline on a `REQUESTED` row (v3.8.0) — see `FeedbackResponse.expiresOn`.
+             */
+            expiresOn?: string | null;
             /** @description First 200 characters of `content`. */
             contentPreview: string;
             /** @description Full (uncapped) content. Present only on `view=kudos` rows — every other view omits the key entirely. */
@@ -4825,11 +4851,12 @@ export interface components {
              * @description Structured event kind; the client renders it in the viewer's language.
              * @enum {string}
              */
-            type: "CREATED" | "DELETED" | "STATUS_CHANGED" | "CONTENT_UPDATED" | "CONTENT_AND_VISIBILITY_UPDATED" | "VISIBILITY_CHANGED";
+            type: "CREATED" | "DELETED" | "STATUS_CHANGED" | "CONTENT_UPDATED" | "CONTENT_AND_VISIBILITY_UPDATED" | "VISIBILITY_CHANGED" | "REQUEST_EXPIRED";
             /**
              * @description Interpolation params for the localized rendering, as enum names — e.g.
              *     `{status}` for CREATED, `{from,to}` for STATUS_CHANGED, `{to}` for VISIBILITY_CHANGED.
-             *     Empty object when the event kind needs none.
+             *     Empty object when the event kind needs none (e.g. REQUEST_EXPIRED, v3.8.0 — the lazy
+             *     expiry sweep, whose sentence carries no actor).
              */
             params: {
                 [key: string]: string;
@@ -6369,7 +6396,7 @@ export interface components {
              * @description Notification kind; the client renders it in the viewer's language.
              * @enum {string}
              */
-            type: "FEEDBACK_REQUESTED_TO_PROVIDER" | "FEEDBACK_REQUESTED_TO_REQUESTER" | "FEEDBACK_SENT_TO_SUBJECT" | "FEEDBACK_SENT_TO_PROVIDER" | "FEEDBACK_SENT_TO_REQUESTER" | "FEEDBACK_SENT_TO_MANAGER" | "FEEDBACK_REJECTED_TO_REQUESTER" | "FEEDBACK_PICKED_UP_TO_REQUESTER" | "FEEDBACK_WITHDRAWN_TO_SUBJECT" | "FEEDBACK_WITHDRAWN_TO_REQUESTER" | "FEEDBACK_DELETED_TO_REQUESTER" | "ONE_ON_ONE_CREATED_TO_SUBORDINATE" | "ONE_ON_ONE_CREATED_TO_MANAGER" | "GOAL_ACTIVATED_TO_SUBORDINATE" | "GOAL_DEACTIVATED_TO_SUBORDINATE" | "GOAL_ARCHIVED_TO_SUBORDINATE" | "GOAL_REOPENED_TO_SUBORDINATE" | "GOAL_PROGRESS_UPDATED_TO_SUBORDINATE" | "GOAL_PROGRESS_UPDATED_TO_MANAGER" | "TEAM_KPI_ACTIVATED_TO_MEMBER" | "TEAM_KPI_DEACTIVATED_TO_MEMBER" | "TEAM_KPI_ARCHIVED_TO_MEMBER" | "TEAM_KPI_VALUE_RECORDED_TO_MEMBER" | "TEAM_KPI_VALUE_CORRECTED_TO_MEMBER" | "TEAM_KPI_VALUE_REMOVED_TO_MEMBER" | "TEAM_KPI_REOPENED_TO_MEMBER" | "PERFORMANCE_REVIEW_PUBLISHED_TO_SUBORDINATE" | "PERFORMANCE_REVIEW_UNPUBLISHED_TO_SUBORDINATE" | "DAYS_OFF_REQUESTED_TO_MANAGER" | "DAYS_OFF_ACCEPTED_TO_OWNER" | "DAYS_OFF_REJECTED_TO_OWNER" | "DAYS_OFF_CANCELLED_TO_MANAGER" | "DAYS_OFF_CANCELLED_TO_OWNER" | "DAYS_OFF_CORRECTED_TO_OWNER" | "DAYS_OFF_RECORDED_TO_OWNER" | "DAYS_OFF_RECORDED_TO_MANAGER" | "DAYS_OFF_ALLOWANCE_CHANGED" | "PULSE_CYCLE_SCHEDULED" | "PULSE_CYCLE_OPENED" | "PULSE_RESULTS_AVAILABLE" | "PULSE_CYCLE_CANCELLED" | "IMPACT_ENTRY_CREATED_TO_MANAGER" | "IMPACT_ENTRY_UPDATED_TO_MANAGER" | "IMPACT_ENTRY_DELETED_TO_MANAGER" | "CAREER_POSITION_STARTED_TO_USER" | "PASSWORD_CHANGED";
+            type: "FEEDBACK_REQUESTED_TO_PROVIDER" | "FEEDBACK_REQUESTED_TO_REQUESTER" | "FEEDBACK_SENT_TO_SUBJECT" | "FEEDBACK_SENT_TO_PROVIDER" | "FEEDBACK_SENT_TO_REQUESTER" | "FEEDBACK_SENT_TO_MANAGER" | "FEEDBACK_REJECTED_TO_REQUESTER" | "FEEDBACK_PICKED_UP_TO_REQUESTER" | "FEEDBACK_WITHDRAWN_TO_SUBJECT" | "FEEDBACK_WITHDRAWN_TO_REQUESTER" | "FEEDBACK_DELETED_TO_REQUESTER" | "FEEDBACK_REQUEST_EXPIRED_TO_REQUESTER" | "FEEDBACK_REQUEST_EXPIRED_TO_PROVIDER" | "ONE_ON_ONE_CREATED_TO_SUBORDINATE" | "ONE_ON_ONE_CREATED_TO_MANAGER" | "GOAL_ACTIVATED_TO_SUBORDINATE" | "GOAL_DEACTIVATED_TO_SUBORDINATE" | "GOAL_ARCHIVED_TO_SUBORDINATE" | "GOAL_REOPENED_TO_SUBORDINATE" | "GOAL_PROGRESS_UPDATED_TO_SUBORDINATE" | "GOAL_PROGRESS_UPDATED_TO_MANAGER" | "TEAM_KPI_ACTIVATED_TO_MEMBER" | "TEAM_KPI_DEACTIVATED_TO_MEMBER" | "TEAM_KPI_ARCHIVED_TO_MEMBER" | "TEAM_KPI_VALUE_RECORDED_TO_MEMBER" | "TEAM_KPI_VALUE_CORRECTED_TO_MEMBER" | "TEAM_KPI_VALUE_REMOVED_TO_MEMBER" | "TEAM_KPI_REOPENED_TO_MEMBER" | "PERFORMANCE_REVIEW_PUBLISHED_TO_SUBORDINATE" | "PERFORMANCE_REVIEW_UNPUBLISHED_TO_SUBORDINATE" | "DAYS_OFF_REQUESTED_TO_MANAGER" | "DAYS_OFF_ACCEPTED_TO_OWNER" | "DAYS_OFF_REJECTED_TO_OWNER" | "DAYS_OFF_CANCELLED_TO_MANAGER" | "DAYS_OFF_CANCELLED_TO_OWNER" | "DAYS_OFF_CORRECTED_TO_OWNER" | "DAYS_OFF_RECORDED_TO_OWNER" | "DAYS_OFF_RECORDED_TO_MANAGER" | "DAYS_OFF_ALLOWANCE_CHANGED" | "PULSE_CYCLE_SCHEDULED" | "PULSE_CYCLE_OPENED" | "PULSE_RESULTS_AVAILABLE" | "PULSE_CYCLE_CANCELLED" | "IMPACT_ENTRY_CREATED_TO_MANAGER" | "IMPACT_ENTRY_UPDATED_TO_MANAGER" | "IMPACT_ENTRY_DELETED_TO_MANAGER" | "CAREER_POSITION_STARTED_TO_USER" | "PASSWORD_CHANGED";
             /**
              * @description Interpolation values for the localized message — party names (proper nouns), e.g.
              *     `{provider,subject,requester}`; plus `self` — the SPA's i18next context carrier:
@@ -8365,7 +8392,7 @@ export interface operations {
                     "application/json": components["schemas"]["FeedbackResponse"];
                 };
             };
-            /** @description Validation error (provider ∉ recipients — feedback about yourself is not supported; at most 4 distinct recipients; a requested feedback has exactly one recipient; requester ≠ provider; REQUESTED requires a requester; a feedback with a requester may not use PROVIDER_SUBJECT visibility; PROVIDER_REQUESTER visibility requires a requester; a deactivated party) or referenced user does not exist */
+            /** @description Validation error (provider ∉ recipients — feedback about yourself is not supported; at most 4 distinct recipients; a requested feedback has exactly one recipient; requester ≠ provider; REQUESTED requires a requester; a feedback with a requester may not use PROVIDER_SUBJECT visibility; PROVIDER_REQUESTER visibility requires a requester; a deactivated party; expiresOn set on a non-REQUESTED status, malformed, or in the past) or referenced user does not exist */
             400: {
                 headers: {
                     [name: string]: unknown;

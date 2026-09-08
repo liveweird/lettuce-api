@@ -16,6 +16,7 @@ import ch.nokillswit.teams.transitiveSubordinateIds
 import ch.nokillswit.users.UserService
 import io.ktor.server.plugins.BadRequestException
 import io.ktor.util.AttributeKey
+import java.time.LocalDate
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.singleOrNull
 import kotlinx.coroutines.flow.toList
@@ -48,6 +49,19 @@ data class FeedbackListResult(
 
 data class FeedbackCreateResult(
     val id: UInt,
+    val notifications: List<Notification>,
+)
+
+/**
+ * One row flipped by [FeedbackService.expireOverdueRequests] — the caller (the feedback list
+ * route) persists these exactly like the manual `POST …/reject` path: the notifications via
+ * `NotificationService.create`, then the event via `feedbackExpiryEvent().toEvent(feedbackId,
+ * providerId)` (`feedback_events.user_id` is `NOT NULL`, so the event is attributed to the
+ * provider — see `feedbackExpiryEvent`).
+ */
+data class ExpiredOutcome(
+    val feedbackId: UInt,
+    val providerId: UInt,
     val notifications: List<Notification>,
 )
 
@@ -99,6 +113,10 @@ class FeedbackService(val database: R2dbcDatabase, private val cipher: FieldCiph
         val status = enumerationByName("status", 20, FeedbackStatus::class)
         val content = text("content")
         val requesterMessage = text("requester_message").nullable()
+        // Optional REQUESTED-only deadline (v3.8.0, V76). Set once at creation, never updated
+        // (the requesterMessage precedent) — see validateFeedbackExpiry and
+        // expireOverdueRequests.
+        val expiresOn = varchar("expires_on", 10).nullable()
         val lastModified = long("last_modified")
         val markedAsDeleted = bool("marked_as_deleted").default(false)
     }
@@ -161,6 +179,7 @@ class FeedbackService(val database: R2dbcDatabase, private val cipher: FieldCiph
             it[status] = feedback.status
             it[content] = cipher.encrypt(feedback.content)
             it[requesterMessage] = feedback.requesterMessage?.let(cipher::encrypt)
+            it[expiresOn] = feedback.expiresOn
             it[lastModified] = System.currentTimeMillis()
         }
         val id = newRecord[Feedbacks.id].value
@@ -192,6 +211,7 @@ class FeedbackService(val database: R2dbcDatabase, private val cipher: FieldCiph
         status = this[Feedbacks.status],
         content = cipher.decrypt(this[Feedbacks.content]),
         requesterMessage = this[Feedbacks.requesterMessage]?.let(cipher::decrypt),
+        expiresOn = this[Feedbacks.expiresOn],
         lastModified = this[Feedbacks.lastModified],
     )
 
@@ -333,6 +353,51 @@ class FeedbackService(val database: R2dbcDatabase, private val cipher: FieldCiph
             )
         }
     }
+
+    /**
+     * The lazy expiry sweep (v3.8.0 — no background job, the `AlertService.visible(now)`
+     * precedent): flips every active `REQUESTED` row whose `expiresOn` deadline has passed
+     * (`expires_on < today`, ISO string compare — lexicographic == chronological) to `REJECTED`,
+     * bumping `lastModified`, and returns one [ExpiredOutcome] per flipped row for the caller
+     * (the feedback list route) to persist exactly like the manual `POST …/reject` path. One
+     * `suspendTransaction`, so the select-then-update is atomic; idempotent — a row already
+     * flipped no longer matches the `REQUESTED` predicate, so a second call selects nothing.
+     * [today] is injectable, the `validateGoalDueDate` testability pattern.
+     */
+    suspend fun expireOverdueRequests(today: LocalDate = LocalDate.now()): List<ExpiredOutcome> =
+        suspendTransaction(database) {
+            val todayIso = today.toString()
+            val overdueRows = Feedbacks
+                .selectAll()
+                .where {
+                    (Feedbacks.status eq FeedbackStatus.REQUESTED) and
+                        Feedbacks.expiresOn.isNotNull() and
+                        (Feedbacks.expiresOn less todayIso) and
+                        active()
+                }
+                .toList()
+            if (overdueRows.isEmpty()) return@suspendTransaction emptyList()
+
+            val overdue = overdueRows.map { it[Feedbacks.id].value to it.toFeedback() }
+            val ids = overdue.map { it.first }
+            Feedbacks.update({
+                (Feedbacks.id inList ids) and (Feedbacks.status eq FeedbackStatus.REQUESTED) and active()
+            }) {
+                it[status] = FeedbackStatus.REJECTED
+                it[lastModified] = System.currentTimeMillis()
+            }
+            overdue.map { (id, feedback) ->
+                val names = resolvePartyNames(feedback)
+                ExpiredOutcome(
+                    feedbackId = id,
+                    providerId = feedback.providerId,
+                    notifications = listOf(
+                        feedbackExpiredToRequesterNotification(feedback, names),
+                        feedbackExpiredToProviderNotification(feedback, names),
+                    ),
+                )
+            }
+        }
 
     /** The recipients' direct managers: id → name, plus which recipients each one manages. */
     private data class SubjectManagers(
@@ -632,6 +697,7 @@ class FeedbackService(val database: R2dbcDatabase, private val cipher: FieldCiph
                 Feedbacks.providerId,
                 Feedbacks.visibility,
                 Feedbacks.status,
+                Feedbacks.expiresOn,
                 Feedbacks.content,
                 Feedbacks.lastModified,
                 requesterUsers[UserService.Users.name],
@@ -734,6 +800,7 @@ class FeedbackService(val database: R2dbcDatabase, private val cipher: FieldCiph
             providerDeleted = row[providerUsers[UserService.Users.markedAsDeleted]],
             visibility = row[Feedbacks.visibility],
             status = row[Feedbacks.status],
+            expiresOn = row[Feedbacks.expiresOn],
             contentPreview = decrypted.take(CONTENT_PREVIEW_LENGTH),
             // The Kudos wall renders full content inline (expand-on-click), and every
             // kudos row is PUBLIC+SENT — never redacted — so only that view carries it.

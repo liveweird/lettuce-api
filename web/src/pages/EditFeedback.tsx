@@ -15,6 +15,7 @@ import { getUserId, hasFeature } from "../api/session";
 import { subjectDisplays } from "../utils/feedbackSubjects";
 import { deleteFeedback, getFeedback, pickUpFeedback, rejectFeedback, sendFeedback, updateFeedback, type FeedbackStatus, type FeedbackVisibility } from "../api/feedbacks";
 import ConfirmActionModal from "../components/ConfirmActionModal";
+import DateCell from "../components/DateCell";
 import FeedbackForm from "../components/FeedbackForm";
 import FormFooter from "../components/FormFooter";
 import MetaStrip from "../components/MetaStrip";
@@ -223,6 +224,17 @@ export default function EditFeedback() {
                     label: t("common.field.requester"),
                     value: <PersonaChip name={requesterDisplay} />,
                   },
+                  // The requester's optional deadline (v3.8.0): the provider sees it before
+                  // deciding — same field/gate as ViewFeedback's MetaStrip row.
+                  ...(data!.expiresOn
+                    ? [
+                        {
+                          key: "expiresOn",
+                          label: t("feedback.expiresOnLabel"),
+                          value: <DateCell value={data!.expiresOn} mode="date" />,
+                        },
+                      ]
+                    : []),
                 ]}
               />
               <RequesterMessage value={data!.requesterMessage} />

@@ -25,6 +25,7 @@ type FeedbackItem = {
   status: "REQUESTED" | "DRAFT" | "SENT" | "WITHDRAWN";
   contentPreview: string;
   subjects?: { id: number; name: string; deleted: boolean }[];
+  expiresOn?: string | null;
 };
 
 
@@ -116,6 +117,27 @@ describe("FeedbackTable (received view)", () => {
     // The requester cell (and, since v3.5.0, an absent timestamp) render the dash.
     expect((await screen.findAllByText("—")).length).toBeGreaterThan(0);
     expect(screen.getByText("Bob Provider (deleted)")).toBeInTheDocument();
+  });
+
+  test("shows the expiration deadline under the status pill on a REQUESTED row only", async () => {
+    setupMocks(
+      mockFetch,
+      feedbacksPage([
+        { ...SEED_FEEDBACKS[0], status: "REQUESTED", expiresOn: "2099-06-15" },
+        SEED_FEEDBACKS[1], // status: DRAFT, no expiresOn
+      ]),
+    );
+    renderWithProviders(<FeedbackTable view="received" />);
+
+    expect(await screen.findByText("Expires Jun 15, 2099")).toBeInTheDocument();
+  });
+
+  test("a REQUESTED row with no expiration shows no deadline text", async () => {
+    setupMocks(mockFetch, feedbacksPage([{ ...SEED_FEEDBACKS[0], status: "REQUESTED" }]));
+    renderWithProviders(<FeedbackTable view="received" />);
+
+    await screen.findByText("Requested");
+    expect(screen.queryByText(/^Expires /)).toBeNull();
   });
 
   test("shows 'You' in the Requester column when the requester is the current user", async () => {

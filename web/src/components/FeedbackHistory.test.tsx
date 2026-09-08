@@ -43,6 +43,19 @@ describe("FeedbackHistory", () => {
     expect(screen.getAllByText(/Paula/).length).toBeGreaterThan(0);
   });
 
+  test("renders the auto-expiry sentence for a REQUEST_EXPIRED event", async () => {
+    mockFetch.mockResolvedValue(
+      jsonResponse(200, {
+        items: [
+          { id: 1, feedbackId: 5, userId: 10, userName: "Paula", timestamp: 1, type: "REQUEST_EXPIRED", params: {} },
+        ],
+      }),
+    );
+    renderWithProviders(<FeedbackHistory feedbackId={5} />);
+
+    expect(await screen.findByText("The feedback request expired.")).toBeInTheDocument();
+  });
+
   test("shows an empty-state note when there are no events", async () => {
     mockFetch.mockResolvedValue(jsonResponse(200, { items: [] }));
     renderWithProviders(<FeedbackHistory feedbackId={5} />);

@@ -10,6 +10,7 @@ import { getUserId, hasFeature } from "../api/session";
 import { createFeedback, type FeedbackVisibility } from "../api/feedbacks";
 import DiscardGuard from "../components/DiscardGuard";
 import DuplicateFeedbackAlert from "../components/DuplicateFeedbackAlert";
+import FeedbackExpirationField from "../components/FeedbackExpirationField";
 import FormFooter from "../components/FormFooter";
 import MetaStrip from "../components/MetaStrip";
 import PageHeader from "../components/PageHeader";
@@ -18,7 +19,7 @@ import { useDiscardGuard } from "../hooks/useDiscardGuard";
 import { useFeedbackDuplicate } from "../hooks/useFeedbackDuplicate";
 import { REQUESTER_VISIBILITIES } from "../utils/feedbackVisibility";
 import { saveErrorMessage } from "../utils/saveError";
-import { REQUEST_ERROR_KEYS } from "../utils/feedbackForm";
+import { REQUEST_ERROR_KEYS, resolveFeedbackExpiresOn, type ExpirationPreset } from "../utils/feedbackForm";
 import { showSuccessToast } from "../utils/toast";
 import { invalidateFeedback } from "../utils/feedbackQueries";
 import { safeBackParam } from "../utils/url";
@@ -45,11 +46,15 @@ export default function AskFeedback() {
 
   const [visibility, setVisibility] = useState<FeedbackVisibility>(DEFAULT_VISIBILITY);
   const [message, setMessage] = useState("");
+  // The expiration control (v3.8.0), the RequestFeedback sibling.
+  const [expirationPreset, setExpirationPreset] = useState<ExpirationPreset>("none");
+  const [customExpiresOn, setCustomExpiresOn] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  // The one cancel guard (v3.5.0): a typed note or a changed visibility is work worth a confirm.
+  // The one cancel guard (v3.5.0): a typed note, a changed visibility, or a chosen expiration is
+  // work worth a confirm.
   const { requestCancel, guardProps } = useDiscardGuard({
-    isDirty: message !== "" || visibility !== DEFAULT_VISIBILITY,
+    isDirty: message !== "" || visibility !== DEFAULT_VISIBILITY || expirationPreset !== "none",
     to: backTo,
     title: t("feedback.discardRequestTitle"),
     message: t("feedback.discardAskMessage"),
@@ -85,6 +90,7 @@ export default function AskFeedback() {
         status: "REQUESTED",
         content: "",
         requesterMessage: message.trim() || undefined,
+        expiresOn: resolveFeedbackExpiresOn(expirationPreset, customExpiresOn),
       });
       await invalidateFeedback(queryClient);
       showSuccessToast(t("feedback.toast.requested"));
@@ -146,6 +152,13 @@ export default function AskFeedback() {
               autosize
               minRows={2}
               maxRows={6}
+            />
+
+            <FeedbackExpirationField
+              preset={expirationPreset}
+              onPresetChange={setExpirationPreset}
+              customDate={customExpiresOn}
+              onCustomDateChange={setCustomExpiresOn}
             />
 
             {error && (

@@ -1351,6 +1351,11 @@ paths:
 
         Malformed query parameters (unknown view, unknown sort field, unknown enum value,
         out-of-range page/pageSize) respond with `400` and a `ProblemDetail` body.
+
+        Side effect (v3.8.0): before building the page, every `REQUESTED` row whose `expiresOn`
+        deadline has passed is lazily auto-rejected (`REQUESTED → REJECTED`, a `REQUEST_EXPIRED`
+        history event, and a notification to both parties) — no background job, so this is the
+        earliest a stale request is guaranteed to flip.
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PageSize'
@@ -1456,7 +1461,10 @@ paths:
         `REQUESTED`); the `ProblemDetail.instance` carries `/api/v1/feedbacks/{id}` of the
         existing record. Clients should pre-check via `GET /api/v1/feedbacks/duplicate-check`
         (once per recipient). Creation involving a **deactivated** party (provider, requester,
-        or any recipient) is rejected with `400`.
+        or any recipient) is rejected with `400`. An optional `expiresOn` deadline (v3.8.0) is
+        accepted only while `status == REQUESTED`, must be a strict ISO date, and must not be in
+        the past — otherwise `400`; once passed, `GET /api/v1/feedbacks` lazily auto-rejects the
+        request.
       requestBody:
         required: true
         content:
@@ -1475,7 +1483,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/FeedbackResponse'
         '400':
-          description: 'Validation error (provider ∉ recipients — feedback about yourself is not supported; at most 4 distinct recipients; a requested feedback has exactly one recipient; requester ≠ provider; REQUESTED requires a requester; a feedback with a requester may not use PROVIDER_SUBJECT visibility; PROVIDER_REQUESTER visibility requires a requester; a deactivated party) or referenced user does not exist'
+          description: 'Validation error (provider ∉ recipients — feedback about yourself is not supported; at most 4 distinct recipients; a requested feedback has exactly one recipient; requester ≠ provider; REQUESTED requires a requester; a feedback with a requester may not use PROVIDER_SUBJECT visibility; PROVIDER_REQUESTER visibility requires a requester; a deactivated party; expiresOn set on a non-REQUESTED status, malformed, or in the past) or referenced user does not exist'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ProblemDetail' }
@@ -7191,6 +7199,17 @@ components:
             Requester's clarification note to the provider (why they asked, what they expect).
             Create-only: the `PUT` body has no such field, and sending it there is rejected
             with `400` (unknown keys are not accepted).
+        expiresOn:
+          type: string
+          format: date
+          nullable: true
+          maxLength: 10
+          description: |
+            Optional deadline on a `REQUESTED` request (v3.8.0). Meaningful only while
+            `status == REQUESTED` — otherwise `400`; must be a strict ISO date and not in the
+            past (`400`). Create-only: set once and never editable afterward, like
+            `requesterMessage`. Null (the default) = indefinite (today's behaviour). Once
+            passed, the request auto-rejects (see `GET /api/v1/feedbacks`).
 
     FeedbackSubject:
       type: object
@@ -7233,6 +7252,14 @@ components:
           description: |
             Requester's clarification note to the provider, set at creation and never editable.
             Null when the requester left it empty.
+        expiresOn:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            Optional deadline on a `REQUESTED` request (v3.8.0), set at creation and never
+            editable. Null = indefinite, or the request already left `REQUESTED` (inert past
+            that point — see `GET /api/v1/feedbacks`, which auto-rejects an overdue row).
         lastModified:
           type: integer
           format: int64
@@ -7303,6 +7330,12 @@ components:
         status:
           type: string
           enum: [REQUESTED, DRAFT, SENT, WITHDRAWN, REJECTED]
+        expiresOn:
+          type: string
+          format: date
+          nullable: true
+          description: >-
+            Optional deadline on a `REQUESTED` row (v3.8.0) — see `FeedbackResponse.expiresOn`.
         contentPreview:
           type: string
           description: First 200 characters of `content`.
@@ -7575,7 +7608,7 @@ components:
           description: Epoch milliseconds when the event was recorded. Server-managed.
         type:
           type: string
-          enum: [CREATED, DELETED, STATUS_CHANGED, CONTENT_UPDATED, CONTENT_AND_VISIBILITY_UPDATED, VISIBILITY_CHANGED]
+          enum: [CREATED, DELETED, STATUS_CHANGED, CONTENT_UPDATED, CONTENT_AND_VISIBILITY_UPDATED, VISIBILITY_CHANGED, REQUEST_EXPIRED]
           description: Structured event kind; the client renders it in the viewer's language.
         params:
           type: object
@@ -7583,7 +7616,8 @@ components:
           description: |
             Interpolation params for the localized rendering, as enum names — e.g.
             `{status}` for CREATED, `{from,to}` for STATUS_CHANGED, `{to}` for VISIBILITY_CHANGED.
-            Empty object when the event kind needs none.
+            Empty object when the event kind needs none (e.g. REQUEST_EXPIRED, v3.8.0 — the lazy
+            expiry sweep, whose sentence carries no actor).
 
     FeedbackEventList:
       type: object
@@ -9702,6 +9736,8 @@ components:
             - FEEDBACK_WITHDRAWN_TO_SUBJECT
             - FEEDBACK_WITHDRAWN_TO_REQUESTER
             - FEEDBACK_DELETED_TO_REQUESTER
+            - FEEDBACK_REQUEST_EXPIRED_TO_REQUESTER
+            - FEEDBACK_REQUEST_EXPIRED_TO_PROVIDER
             - ONE_ON_ONE_CREATED_TO_SUBORDINATE
             - ONE_ON_ONE_CREATED_TO_MANAGER
             - GOAL_ACTIVATED_TO_SUBORDINATE

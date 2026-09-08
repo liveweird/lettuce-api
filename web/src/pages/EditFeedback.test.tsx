@@ -366,6 +366,25 @@ describe("EditFeedback page", () => {
     expect(message).toHaveAttribute("readonly");
   });
 
+  test("a requested feedback with an expiration shows the deadline on the triage screen", async () => {
+    mockFetch.mockResolvedValue(
+      jsonResponse(200, { ...REQUESTED_FEEDBACK, expiresOn: "2099-06-15" }),
+    );
+    renderEditFeedback();
+
+    await screen.findByRole("heading", { name: /feedback request/i });
+    expect(screen.getByText("Expires on")).toBeInTheDocument();
+    expect(screen.getByText("Jun 15, 2099")).toBeInTheDocument();
+  });
+
+  test("a requested feedback with no expiration shows no deadline on the triage screen", async () => {
+    mockFetch.mockResolvedValue(jsonResponse(200, REQUESTED_FEEDBACK));
+    renderEditFeedback();
+
+    await screen.findByRole("heading", { name: /feedback request/i });
+    expect(screen.queryByText("Expires on")).toBeNull();
+  });
+
   test("Accept POSTs /pick-up and reloads in place as the editor", async () => {
     let accepted = false;
     mockFetch.mockImplementation((url: string, init?: RequestInit) => {
