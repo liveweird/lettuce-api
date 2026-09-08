@@ -62,8 +62,10 @@ This evidence does not establish production readiness. In particular:
   representative visual/accessibility review, load testing, exhaustive penetration
   testing, and long-term flake analysis remain unverified by these audits.
 - Multi-instance deployment remains unverified. Instance-local authentication state
-  and rate limits, including rolling-deployment overlap, need an explicit design
-  review before scaling.
+  and rate limits need an explicit design review before scaling. Rolling-deployment
+  overlap on the existing single-replica deployment is addressed: `k8s/templates/app-deployment.yaml`
+  sets `strategy: type: Recreate`, so the old pod is torn down before the new one starts —
+  two pods never briefly share (and split) in-memory session/rate-limit state.
 - Container/dependency pins do not prove byte-for-byte reproducibility or publisher
   authenticity. Remaining package/toolchain inputs and checksum trust are documented
   in the linked image and dependency runbooks; reviewed updates remain necessary.

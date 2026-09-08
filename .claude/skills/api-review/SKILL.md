@@ -16,6 +16,10 @@ npx --yes @stoplight/spectral-cli lint <target-spec> \
   --ruleset api-guidelines/api-guidelines.spectral.yaml
 ```
 
+CI (`.github/workflows/quality.yml`, job `api-contract`) pins `@stoplight/spectral-cli@6.15.0`
+and adds `--fail-severity error`; pin the same version and flag for a local run to match CI
+exactly (an unpinned `npx` can silently resolve a newer Spectral with different rule behavior).
+
 Interpret by severity (the model is documented in `api-guidelines/README.md`):
 
 - **error** — a real violation; report it as a finding, citing the rule ID from the message.

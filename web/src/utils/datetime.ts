@@ -53,36 +53,46 @@ export function formatIsoWeekday(iso: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, { weekday: "short" }).format(d);
 }
 
-// ISO "YYYY-MM" -> a localized month ("January 2026" / "styczeń 2026"). The -01T00:00:00
-// suffix pins parsing to local time (the formatIsoDate rationale). Malformed input renders
-// as-is rather than "Invalid Date".
-export function formatIsoMonth(month: string, locale: string): string {
+// ISO "YYYY-MM" -> a localized month, "long" ("January 2026" / "styczeń 2026") or "short"
+// ("Aug 2026" / "sie 2026"). The -01T00:00:00 suffix pins parsing to local time (the
+// formatIsoDate rationale). Malformed input renders as-is rather than "Invalid Date". The one
+// parameterised core behind formatIsoMonth/formatIsoMonthShort below.
+function formatIsoMonthCore(month: string, locale: string, style: "long" | "short"): string {
   const d = new Date(`${month}-01T00:00:00`);
   if (Number.isNaN(d.getTime())) return month;
-  return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(d);
+  return new Intl.DateTimeFormat(locale, { month: style, year: "numeric" }).format(d);
+}
+
+// A review period's inclusive month range ("January 2026 – June 2026" long / "Aug 2026 – Jan
+// 2027" short); a single-month period renders as just that month. The one parameterised core
+// behind formatMonthRange/formatMonthRangeShort below.
+function formatMonthRangeCore(start: string, end: string, locale: string, style: "long" | "short"): string {
+  if (start === end) return formatIsoMonthCore(start, locale, style);
+  return `${formatIsoMonthCore(start, locale, style)} – ${formatIsoMonthCore(end, locale, style)}`;
+}
+
+// ISO "YYYY-MM" -> a localized month ("January 2026" / "styczeń 2026").
+export function formatIsoMonth(month: string, locale: string): string {
+  return formatIsoMonthCore(month, locale, "long");
 }
 
 // A review period's inclusive month range ("January 2026 – June 2026"); a single-month period
 // renders as just that month.
 export function formatMonthRange(start: string, end: string, locale: string): string {
-  if (start === end) return formatIsoMonth(start, locale);
-  return `${formatIsoMonth(start, locale)} – ${formatIsoMonth(end, locale)}`;
+  return formatMonthRangeCore(start, end, locale, "long");
 }
 
 // ISO "YYYY-MM" -> a localized SHORT month ("Aug 2026" / "sie 2026"). The compact form for
 // space-tight contexts (the person cards' last-review row, where the full month name + a status
-// badge overflow the narrow two-column body). Same local-time pin / passthrough as formatIsoMonth.
+// badge overflow the narrow two-column body).
 export function formatIsoMonthShort(month: string, locale: string): string {
-  const d = new Date(`${month}-01T00:00:00`);
-  if (Number.isNaN(d.getTime())) return month;
-  return new Intl.DateTimeFormat(locale, { month: "short", year: "numeric" }).format(d);
+  return formatIsoMonthCore(month, locale, "short");
 }
 
 // formatMonthRange with abbreviated months ("Aug 2026 – Jan 2027"); the compact sibling for the
 // person cards. A single-month period renders as just that short month.
 export function formatMonthRangeShort(start: string, end: string, locale: string): string {
-  if (start === end) return formatIsoMonthShort(start, locale);
-  return `${formatIsoMonthShort(start, locale)} – ${formatIsoMonthShort(end, locale)}`;
+  return formatMonthRangeCore(start, end, locale, "short");
 }
 
 // ISO "YYYY-MM" plus [months] — period-end defaults and the adjacency rule both step months.

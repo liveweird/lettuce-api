@@ -67,7 +67,7 @@
     }
   },
   "expiresOnLabel": "Termin ważności",
-  "expiresRow": "Wygasa {{date}}",
+  "expiresRow": "Wygasa",
   "recipientsLabel": "Odbiorcy",
   "recipientsHint": "Maksymalnie {{max}} osoby",
   "recipientsMaxReached": "Osiągnięto maksimum {{max}} osób — usuń kogoś, aby wybrać kolejną osobę",

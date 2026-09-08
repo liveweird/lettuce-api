@@ -67,7 +67,7 @@
     }
   },
   "expiresOnLabel": "Expires on",
-  "expiresRow": "Expires {{date}}",
+  "expiresRow": "Expires",
   "recipientsLabel": "Recipients",
   "recipientsHint": "Up to {{max}} people",
   "recipientsMaxReached": "Maximum of {{max}} people reached — remove one to pick another",

@@ -17,6 +17,12 @@ interface ChangelogEntry {
 
 export const CHANGELOG: readonly ChangelogEntry[] = [
   {
+    version: "3.8.4",
+    date: "2026-09-09",
+    en: `Editing a dictionary now warns before you navigate away with unsaved changes, matching the other edit screens. Plus internal tidying and documentation fixes.`,
+    pl: `Edycja słownika ostrzega teraz przed opuszczeniem ekranu z niezapisanymi zmianami, tak jak pozostałe ekrany edycji. Do tego wewnętrzne porządki i poprawki w dokumentacji.`,
+  },
+  {
     version: "3.8.3",
     date: "2026-09-09",
     en: `A feedback request that expires on its own now shows "Automatic" in the history instead of a person's name, and expiring a request can no longer collide with someone picking it up at the same moment. Plus reliability and deployment hardening under the hood.`,

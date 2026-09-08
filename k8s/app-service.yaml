@@ -8,7 +8,7 @@ metadata:
     io.kompose.service: app
   name: app
 spec:
-  # ClusterIP: the Ingress (k8s/app-ingress.yaml) fronts the app; for debugging use
+  # ClusterIP: the Ingress (k8s/templates/app-ingress.yaml) fronts the app; for debugging use
   # `kubectl port-forward svc/app 8081:8080`. Switching a live LoadBalancer Service to
   # ClusterIP can be rejected (allocated nodePort) — `kubectl delete svc app` first, then apply.
   type: ClusterIP

@@ -75,7 +75,7 @@ spec:
             # and the seed credentials are tolerated, exactly like the compose demo.
             - name: KTOR_DEVELOPMENT
               value: "false"
-            # The app sits behind the TLS-terminating Ingress in k8s/app-ingress.yaml, which sets
+            # The app sits behind the TLS-terminating Ingress in k8s/templates/app-ingress.yaml, which sets
             # X-Forwarded-For (replaced with the real client IP) + X-Forwarded-Proto/-Host, so
             # rate limiting keys on the real client and the HTTPS redirect sees the real scheme
             # and name. HTTP_PROXY_HOPS = trusted proxies that APPEND to X-Forwarded-For (1 =
