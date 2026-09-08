@@ -17,6 +17,12 @@ interface ChangelogEntry {
 
 export const CHANGELOG: readonly ChangelogEntry[] = [
   {
+    version: "3.8.1",
+    date: "2026-09-08",
+    en: `Fixed the layout of a person's card on the Dashboard's subordinate/peer/manager tabs: when a row's value ran onto a second line (for example the last review's period next to its status), the label no longer sits misaligned against it — it now lines up with the first line.`,
+    pl: `Poprawiono układ karty osoby na zakładkach podwładnych/współpracowników/przełożonych na pulpicie: gdy wartość wiersza przechodziła do drugiej linii (na przykład okres ostatniej oceny obok jej statusu), etykieta nie jest już względem niej przesunięta — wyrównuje się teraz z pierwszą linią.`,
+  },
+  {
     version: "3.8.0",
     date: "2026-09-08",
     en: `Requesting feedback now lets you attach an optional deadline — no expiration (as before), in 1 week, 2 weeks, 30 days, or a date you pick. The provider sees the deadline on the request. If nobody picks it up or declines by then, it is automatically declined, and both of you get a notification and a history entry recording it.`,
